@@ -405,6 +405,37 @@ function ProjectsView({invoices,allCrew,setAllCrew,role,expTrackerUrl}){
 }
 
 /* ── FINANCE VIEW ── */
+function InvoiceCard({inv,onOpen,onUpdateAmount,onUpdateStatus}){
+  const rec=totalRec(inv);const pct=Math.min(100,inv.amount>0?(rec/inv.amount)*100:0);const sc=SC[inv.status]||SC["Pending"];
+  return(
+    <div className="card fade-up" style={{padding:"16px 18px",cursor:"pointer",position:"relative",overflow:"hidden"}} onClick={e=>{if(!e.target.closest("[data-nc]"))onOpen();}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:sc.dot}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div style={{minWidth:0,flex:1,marginRight:10}}>
+          <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{inv.project}</div>
+          <div style={{fontSize:12,color:"var(--text2)"}}>{inv.client}</div>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginTop:2}}>{inv.invoiceNo}</div>
+        </div>
+        <div data-nc="1" onClick={e=>e.stopPropagation()}>
+          <StCell status={inv.status} onChange={onUpdateStatus}/>
+        </div>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:rec>0&&rec<inv.amount?8:0}}>
+        <div data-nc="1" onClick={e=>e.stopPropagation()}>
+          <ACell value={inv.amount} onChange={onUpdateAmount}/>
+        </div>
+        <div style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Due {inv.due}</div>
+      </div>
+      {rec>0&&<div style={{marginTop:6}}>
+        <div style={{height:3,borderRadius:3,background:"var(--bg4)",overflow:"hidden",marginBottom:4}}>
+          <div style={{height:"100%",width:`${pct}%`,background:"var(--green)",borderRadius:3,transition:"width .4s"}}/>
+        </div>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div>
+      </div>}
+    </div>
+  );
+}
+
 function FinanceView(){
   const[invoices,setInvoices]=usePersist("frameOS_invoices",SEED_INV);
   const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
@@ -419,33 +450,45 @@ function FinanceView(){
   const doAdd=()=>{if(!form.project.trim()||!form.amount)return;setInvoices(inv=>[...inv,{...form,id:Date.now(),amount:Number(form.amount),payments:[]}]);setForm({invoiceNo:"",project:"",client:"",amount:"",status:"Pending",due:""});setShowAdd(false);};
   const expCSV=()=>{const rows=[["Invoice No","Project","Client","Total","Received","Status","Due"],...invoices.map(i=>[i.invoiceNo,i.project,i.client,i.amount,totalRec(i),i.status,i.due])];const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"}));a.download="invoices.csv";a.click();};
   const selInv=selected?invoices.find(i=>i.id===selected):null;
+  const[isMobile,setIsMobile]=useState(()=>window.innerWidth<=768);
+  useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<=768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}} className="g4">
-      <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} fully paid`} color="var(--green)" icon="✓" delay={0}/>
-      <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} invoices`} color="var(--orange)" icon="◑" delay={50}/>
-      <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length}`} color="var(--amber)" icon="⏳" delay={100}/>
-      <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} invoices`} color="var(--red)" icon="⚠" delay={150}/>
+      <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} paid`} color="var(--green)" icon="✓" delay={0}/>
+      <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} inv`} color="var(--orange)" icon="◑" delay={50}/>
+      <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length} inv`} color="var(--amber)" icon="⏳" delay={100}/>
+      <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} inv`} color="var(--red)" icon="⚠" delay={150}/>
     </div>
     <div className="card" style={{padding:"16px 20px",marginBottom:18}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Revenue overview</span><span style={{fontSize:15,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{fmt(total)} total</span></div>
       <div style={{height:5,borderRadius:5,overflow:"hidden",display:"flex",background:"var(--bg4)"}}>{[[paid+partial,"var(--green)"],[pending,"var(--amber)"],[overdue,"var(--red)"]].map(([v,c],idx)=><div key={idx} style={{width:`${(v/total)*100}%`,background:c,transition:"width .5s ease"}}/>)}</div>
-      <div style={{display:"flex",gap:16,marginTop:10}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
+      <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
     </div>
-    <div style={{fontSize:12,color:"var(--text3)",marginBottom:12,fontFamily:"'DM Mono',monospace"}}>✎ click amount · click badge · click row to open</div>
-    <div style={{display:"flex",gap:10,marginBottom:14}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New invoice</button><button className="btn-g" onClick={expCSV}>↓ Export CSV</button></div>
-    <div className="fscroll"><div className="card" style={{overflow:"visible"}}>
-      <div style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",background:"var(--bg3)",borderBottom:"1px solid var(--border)",borderRadius:"12px 12px 0 0",minWidth:480}}>
-        {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
+    <div style={{display:"flex",gap:10,marginBottom:14}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New invoice</button><button className="btn-g" onClick={expCSV}>↓ CSV</button></div>
+
+    {/* MOBILE: card layout — no horizontal scroll */}
+    {isMobile?(
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {invoices.map(inv=><InvoiceCard key={inv.id} inv={inv} onOpen={()=>setSelected(inv.id)} onUpdateAmount={v=>upd(inv.id,{amount:v})} onUpdateStatus={st=>upd(inv.id,{status:st})}/>)}
       </div>
-      {invoices.map((inv,i)=>{const rec=totalRec(inv);return <div key={inv.id} className="row-h fade-up" style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",borderBottom:i<invoices.length-1?"1px solid var(--border)":"none",alignItems:"center",animationDelay:`${i*45}ms`,cursor:"pointer",minWidth:480}} onClick={e=>{if(!e.target.closest("[data-nc]"))setSelected(inv.id);}}>
-        <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'DM Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
-        <div style={{padding:"13px 16px",fontSize:14,fontWeight:500,color:"var(--text)"}}>{inv.project}</div>
-        <div style={{padding:"13px 16px",fontSize:13,color:"var(--text2)"}}>{inv.client}</div>
-        <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
-        <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
-        <div data-nc="1" onClick={e=>e.stopPropagation()}><StCell status={inv.status} onChange={st=>upd(inv.id,{status:st})}/></div>
-      </div>;})}
-    </div></div>
+    ):(
+      /* DESKTOP: table layout */
+      <div className="card" style={{overflow:"visible"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",background:"var(--bg3)",borderBottom:"1px solid var(--border)",borderRadius:"12px 12px 0 0"}}>
+          {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
+        </div>
+        {invoices.map((inv,i)=>{const rec=totalRec(inv);return <div key={inv.id} className="row-h fade-up" style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",borderBottom:i<invoices.length-1?"1px solid var(--border)":"none",alignItems:"center",animationDelay:`${i*45}ms`,cursor:"pointer"}} onClick={e=>{if(!e.target.closest("[data-nc]"))setSelected(inv.id);}}>
+          <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'DM Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
+          <div style={{padding:"13px 16px",fontSize:14,fontWeight:500,color:"var(--text)"}}>{inv.project}</div>
+          <div style={{padding:"13px 16px",fontSize:13,color:"var(--text2)"}}>{inv.client}</div>
+          <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
+          <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
+          <div data-nc="1" onClick={e=>e.stopPropagation()}><StCell status={inv.status} onChange={st=>upd(inv.id,{status:st})}/></div>
+        </div>;})}
+      </div>
+    )}
+
     {selInv&&<InvPanel invoice={selInv} onClose={()=>setSelected(null)} onUpdate={upd}/>}
     {showAdd&&<Modal title="New invoice" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><Lbl ch="Invoice number"/><Inp value={form.invoiceNo} onChange={fset("invoiceNo")} placeholder="INV-2026-005"/></div>
