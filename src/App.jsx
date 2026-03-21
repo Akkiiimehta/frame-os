@@ -1,9 +1,64 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');`;
 
+/* ── SUPABASE ── */
+const sb = createClient(
+  "https://dnsybobzvuczmlgvcesx.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuc3lib2J6dnVjem1sZ3ZjZXN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODcxNDcsImV4cCI6MjA4OTY2MzE0N30.l1BKnrohJ-EFiEs9nhOmEdfzl_SD8XX7j-WaP4sxqag"
+);
+
+/* ── LOCALSTORAGE (auth/settings only) ── */
 const LS={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
 function usePersist(key,init){const[val,setVal]=useState(()=>LS.get(key,typeof init==="function"?init():init));const set=useCallback((v)=>{const n=typeof v==="function"?v(val):v;LS.set(key,n);setVal(n);},[key]);return[val,set];}
+
+/* ── DATA MAPPERS ── */
+const mpP=r=>({id:r.id,title:r.title||"",client:r.client||"",type:r.type||"TVC",status:r.status||"Pre-Production",shoot:r.shoot_date||"",budget:Number(r.budget)||0,location:r.location||"",driveLink:r.drive_link||"",tags:r.tags||[],notes:r.notes||"",crewIds:(r.crew_ids||[]).map(Number)});
+const mpC=r=>({id:r.id,name:r.name||"",role:r.role||"Other",phone:r.phone||"",email:r.email||"",location:r.location||"",tags:r.tags||[],notes:r.notes||"",projects:(r.project_ids||[]).map(Number)});
+const mpI=(r,pays)=>({id:r.id,invoiceNo:r.invoice_no||"",project:r.project||"",client:r.client||"",amount:Number(r.amount)||0,status:r.status||"Pending",due:r.due_date||"",payments:(pays||[]).filter(p=>Number(p.invoice_id)===Number(r.id)).map(p=>({id:p.id,amount:Number(p.amount)||0,date:p.date||"",note:p.note||""}))});
+const mpQ=r=>({id:r.id,title:r.title||"",client:r.client||"",project:r.project||"",status:r.status||"Draft",taxPct:Number(r.tax_pct)||18,validUntil:r.valid_until||"",notes:r.notes||"",lines:r.lines||[],createdAt:r.created_at||""});
+const mpA=r=>({name:r.name||"Aki Mehta",title:r.title||"Project Manager & Content Strategist",studio:r.studio||"Frame OS",tagline:r.tagline||"Journey Curators",phone:r.phone||"+91 70212 91405",email:r.email||"yashmehtaoffice@gmail.com",website:r.website||"yashmehtawork.netlify.app",services:r.services||"TVC Production · Brand Films · Product Shoots · Digital Content",bio:r.bio||"",instagram:r.instagram||"linktr.ee/MehtaYash",linkedin:r.linkedin||"",logoColor:r.logo_color||"#1a2f6e"});
+
+/* ── DB HOOKS ── */
+function useDB(table,mapper){
+  const[rows,setRows]=useState([]);const[loading,setLoading]=useState(true);const[error,setError]=useState(null);
+  const load=useCallback(async()=>{setLoading(true);const{data,error:e}=await sb.from(table).select("*").order("id");if(e){setError(e.message);setLoading(false);return;}setRows(mapper?data.map(mapper):data);setLoading(false);},[table]);
+  useEffect(()=>{load();},[load]);
+  return[rows,setRows,loading,error,load];
+}
+
+/* ── DB WRITE HELPERS ── */
+async function dbUpsertProject(p){
+  const row={title:p.title,client:p.client,type:p.type,status:p.status,shoot_date:p.shoot,budget:p.budget,location:p.location,drive_link:p.driveLink,tags:p.tags,notes:p.notes,crew_ids:p.crewIds};
+  if(p.id&&p.id<2e13){const{data}=await sb.from("projects").update(row).eq("id",p.id).select().single();return data?mpP(data):p;}
+  const{data}=await sb.from("projects").insert(row).select().single();return data?mpP(data):p;
+}
+async function dbUpsertCrew(c){
+  const row={name:c.name,role:c.role,phone:c.phone,email:c.email,location:c.location,tags:c.tags,notes:c.notes,project_ids:c.projects};
+  if(c.id&&c.id<2e13){const{data}=await sb.from("crew").update(row).eq("id",c.id).select().single();return data?mpC(data):c;}
+  const{data}=await sb.from("crew").insert(row).select().single();return data?mpC(data):c;
+}
+async function dbDeleteCrew(id){await sb.from("crew").delete().eq("id",id);}
+async function dbUpsertInvoice(inv){
+  const row={invoice_no:inv.invoiceNo,project:inv.project,client:inv.client,amount:inv.amount,status:inv.status,due_date:inv.due};
+  if(inv.id&&inv.id<2e13){await sb.from("invoices").update(row).eq("id",inv.id);return inv.id;}
+  const{data}=await sb.from("invoices").insert(row).select().single();return data?.id;
+}
+async function dbAddPayment(invId,p){const{data}=await sb.from("payments").insert({invoice_id:invId,amount:p.amount,date:p.date,note:p.note}).select().single();return data;}
+async function dbDelPayment(id){await sb.from("payments").delete().eq("id",id);}
+async function dbUpsertQuote(q){
+  const row={title:q.title,client:q.client,project:q.project,status:q.status,tax_pct:q.taxPct,valid_until:q.validUntil,notes:q.notes,lines:q.lines,created_at:q.createdAt};
+  if(q.id&&q.id<2e13){await sb.from("quotes").update(row).eq("id",q.id);return q.id;}
+  const{data}=await sb.from("quotes").insert(row).select().single();return data?.id;
+}
+async function dbDelQuote(id){await sb.from("quotes").delete().eq("id",id);}
+async function dbSaveAbout(a){await sb.from("about").upsert({id:1,name:a.name,title:a.title,studio:a.studio,tagline:a.tagline,bio:a.bio,phone:a.phone,email:a.email,website:a.website,services:a.services,instagram:a.instagram,linkedin:a.linkedin,logo_color:a.logoColor});}
+
+/* ── UI HELPERS ── */
+function LoadingScreen({msg="Loading…"}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}><div style={{width:36,height:36,border:"2px solid rgba(255,255,255,0.1)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/><div style={{fontSize:13,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{msg}</div><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;}
+function ErrScreen({msg}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,padding:24}}><div style={{fontSize:28}}>⚠️</div><div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>Database connection failed</div><div style={{fontSize:13,color:"var(--text3)",textAlign:"center",maxWidth:340}}>{msg}</div><button className="btn-p" onClick={()=>window.location.reload()}>Retry</button></div>;}
+
 
 const GS=`
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -21,7 +76,6 @@ const GS=`
   --radius:12px;--header-h:52px;--bottom-h:62px;
   --panel-bg:#14141a;--header-glass:rgba(14,14,16,0.9);--modal-bg:#1a1a1e;--sidebar-bg:rgba(14,14,16,0.96);
 }
-/* ── LIGHT THEME (warm cream) ── */
 body.light{
   --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeece8;--bg4:#e5e2dc;
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.14);
@@ -35,12 +89,7 @@ body.light{
   --orange:#c2410c;--orange-bg:rgba(194,65,12,0.08);
   --panel-bg:#faf9f6;--header-glass:rgba(245,244,240,0.92);--modal-bg:#ffffff;--sidebar-bg:rgba(245,244,240,0.97);
 }
-body.light ::-webkit-scrollbar-thumb{background:var(--bg4);}
 body.light .card.clickable:hover{box-shadow:0 8px 32px rgba(0,0,0,.12);}
-body.light .panel,.light .cs-panel{background:var(--panel-bg);}
-body.light .mbox{background:var(--modal-bg);}
-body.light .ovl{background:rgba(0,0,0,.35);}
-body.light .povl{background:rgba(0,0,0,.2);}
 body.light .row-h:hover{background:rgba(0,0,0,.025);}
 body.light input[type=date].input{color-scheme:light;}
 html,body{background:var(--bg);color:var(--text);font-family:'Geist',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
@@ -69,15 +118,15 @@ select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.
 .row-h{transition:background .12s;}.row-h:hover{background:rgba(255,255,255,.025);}
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .18s ease;}
 .mbox{background:var(--modal-bg);border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:scaleIn .22s cubic-bezier(.32,.72,0,1);}
-.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border2);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
+.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
 .povl{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:150;animation:fadeIn .2s ease;}
-.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border2);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
+.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
 .cs-ovl{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);z-index:168;animation:fadeIn .2s ease;}
 .ps{padding:20px 26px;border-bottom:1px solid var(--border);}.ps:last-child{border-bottom:none;}
 .drow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}.drow:last-child{border-bottom:none;}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'Geist Mono',monospace;background:var(--bg4);color:var(--text2);border-radius:6px;padding:2px 8px;border:1px solid var(--border);}
 .tchip .del{cursor:pointer;font-size:10px;color:var(--text3);transition:color .12s;}.tchip .del:hover{color:var(--red);}
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--header-glass);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(10,10,14,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
 .bni{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;height:100%;border:none;background:none;cursor:pointer;padding:6px 2px;}
 .bni-ic{font-size:20px;line-height:1;}.bni-lb{font-size:9px;font-family:'Geist Mono',monospace;color:var(--text3);letter-spacing:0.03em;text-transform:uppercase;}
 .bni.active .bni-lb{color:var(--accent);}
@@ -90,8 +139,8 @@ select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.
   .g4{grid-template-columns:1fr 1fr!important;}
   .hpad{padding:0 16px!important;}
   .ps{padding:14px 16px;}
-  .fscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;-webkit-overflow-scrolling:touch;}
-  .fscroll>div{min-width:480px;}
+  .fscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .fscroll>div{min-width:540px;}
   .hmob{display:none!important;}
 }
 @media(max-width:480px){.g4{grid-template-columns:1fr 1fr!important;}.g3{grid-template-columns:1fr!important;}}
@@ -130,19 +179,13 @@ function ENotes({notes,onSave}){const[editing,setEditing]=useState(false);const[
 function ACell({value,onChange}){const[editing,setEditing]=useState(false);const[draft,setDraft]=useState(String(value));const ref=useRef();useEffect(()=>{if(editing&&ref.current)ref.current.focus();},[editing]);const commit=()=>{const n=Number(draft.replace(/[^0-9.]/g,""));if(!isNaN(n)&&n>0)onChange(n);setEditing(false);};if(editing)return <div style={{padding:"6px 16px"}}><div style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:7,padding:"4px 8px",width:"fit-content"}}><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>₹</span><input ref={ref} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape")setEditing(false);}} style={{background:"transparent",border:"none",outline:"none",color:"var(--text)",fontFamily:"'Geist Mono',monospace",fontSize:14,fontWeight:600,width:90}}/></div></div>;return <div onClick={()=>{setDraft(String(value));setEditing(true);}} style={{padding:"13px 16px",fontSize:14,fontWeight:600,fontFamily:"'Geist Mono',monospace",color:"var(--text)",cursor:"text",display:"flex",alignItems:"center",gap:5}}>{fmt(value)}<span style={{fontSize:10,color:"var(--text3)",opacity:.6}}>✎</span></div>;}
 
 function StCell({status,onChange}){
-  const[open,setOpen]=useState(false);
-  const[pos,setPos]=useState({top:0,left:0});
-  const ref=useRef();const trigRef=useRef();
-  useEffect(()=>{if(!open)return;const h=e=>{if(ref.current&&!ref.current.contains(e.target)&&trigRef.current&&!trigRef.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[open]);
-  const handleOpen=()=>{
-    if(trigRef.current){const r=trigRef.current.getBoundingClientRect();setPos({top:r.bottom+4,left:r.left});}
-    setOpen(o=>!o);
-  };
+  const[open,setOpen]=useState(false);const[pos,setPos]=useState({top:0,left:0});
+  const trigRef=useRef();const dropRef=useRef();
+  useEffect(()=>{if(!open)return;const h=e=>{if(trigRef.current&&!trigRef.current.contains(e.target)&&dropRef.current&&!dropRef.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[open]);
+  const handleOpen=()=>{if(trigRef.current){const r=trigRef.current.getBoundingClientRect();setPos({top:r.bottom+4,left:r.left});}setOpen(o=>!o);};
   return <div style={{padding:"10px 16px"}}>
-    <div ref={trigRef} onClick={handleOpen} style={{display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer"}}>
-      <Badge status={status}/><span style={{fontSize:10,color:"var(--text3)"}}>▾</span>
-    </div>
-    {open&&<div ref={ref} style={{position:"fixed",top:pos.top,left:pos.left,zIndex:300,background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:6,minWidth:140,boxShadow:"0 12px 36px rgba(0,0,0,.3)"}}>
+    <div ref={trigRef} onClick={handleOpen} style={{display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer"}}><Badge status={status}/><span style={{fontSize:10,color:"var(--text3)"}}>▾</span></div>
+    {open&&<div ref={dropRef} style={{position:"fixed",top:pos.top,left:pos.left,zIndex:300,background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:6,minWidth:140,boxShadow:"0 12px 36px rgba(0,0,0,.3)"}}>
       {INV_ST.map(st=>{const ss=SC[st];const act=status===st;return <div key={st} onClick={()=>{onChange(st);setOpen(false);}} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:7,cursor:"pointer",background:act?"var(--bg4)":"transparent",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg4)"} onMouseLeave={e=>e.currentTarget.style.background=act?"var(--bg4)":"transparent"}>
         <span style={{width:7,height:7,borderRadius:"50%",background:ss.dot,display:"inline-block",flexShrink:0}}/>
         <span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:act?ss.dot:"var(--text2)",fontWeight:act?500:400}}>{st}</span>
@@ -223,7 +266,7 @@ function CSPanel({project,allCrew,onClose}){
   const tabs=["info","crew","cast","schedule","requirements"];
   const crew=allCrew.filter(c=>(project.crewIds||[]).includes(c.id));
   return(<><div className="cs-ovl" onClick={onClose}/><div className="cs-panel">
-    <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+    <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div><div style={{fontSize:17,fontWeight:700,color:"var(--text)"}}>Call Sheet Generator</div><div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{cs.projectTitle}</div></div>
         <div style={{display:"flex",gap:8}}><button className="btn-p" onClick={dl}>↓ Download</button><button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>
@@ -277,7 +320,7 @@ function InvPanel({invoice,onClose,onUpdate}){
   const addP=()=>{const a=Number(pf.amount);if(!a||!pf.date)return;const np=[...invoice.payments,{id:Date.now(),amount:a,date:pf.date,note:pf.note}];onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});setPf({amount:"",date:"",note:""});};
   const delP=pid=>{const np=invoice.payments.filter(p=>p.id!==pid);onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});};
   return(<><div className="povl" onClick={onClose}/><div className="panel">
-    <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+    <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
         <div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:5}}>{invoice.invoiceNo}</div><div style={{fontSize:20,fontWeight:700,color:"var(--text)",marginBottom:3}}>{invoice.project}</div><div style={{fontSize:13,color:"var(--text2)"}}>{invoice.client}</div></div>
         <button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
@@ -314,7 +357,7 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
     {showCS&&<CSPanel project={project} allCrew={allCrew} onClose={()=>setShowCS(false)}/>}
     <div className="povl" onClick={onClose}/>
     <div className="panel" style={{width:490}}>
-      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div style={{flex:1,minWidth:0,marginRight:12}}><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:3}}>{project.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{project.client}</div></div>
           <div style={{display:"flex",gap:8}}>
@@ -365,19 +408,59 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
 }
 
 /* ── PROJECTS VIEW ── */
-function ProjectsView({invoices,allCrew,setAllCrew,role,expTrackerUrl}){
+function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl}){
   const isAdmin=role==="admin";
-  const[projects,setProjects]=usePersist("frameOS_projects",SEED_PROJECTS);
+  const[projects,setProjects,loadingP,errP]=useDB("projects",mpP);
+  const[rawInv,,loadingI]=useDB("invoices");
+  const[rawPay]=useDB("payments");
+  const invoices=rawInv.map(i=>mpI(i,rawPay));
   const[filter,setFilter]=useState("All");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
   const[form,setForm]=useState({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=filter==="All"?projects:projects.filter(p=>p.status===filter);
   const totalBudget=projects.reduce((s,p)=>s+p.budget,0);
-  const upd=(id,patch)=>{if(!isAdmin)return;setProjects(ps=>ps.map(p=>p.id===id?{...p,...patch}:p));};
-  const addCrew=(pid,cid,isNew)=>{if(isNew){const nm={...cid,projects:[pid]};setAllCrew(c=>[...c,nm]);setProjects(ps=>ps.map(p=>p.id===pid?{...p,crewIds:[...p.crewIds,nm.id]}:p));}else{setProjects(ps=>ps.map(p=>p.id===pid?{...p,crewIds:[...p.crewIds,cid]}:p));setAllCrew(c=>c.map(m=>m.id===cid?{...m,projects:[...m.projects,pid]}:m));}};
-  const remCrew=(pid,cid)=>{setProjects(ps=>ps.map(p=>p.id===pid?{...p,crewIds:p.crewIds.filter(x=>x!==cid)}:p));setAllCrew(c=>c.map(m=>m.id===cid?{...m,projects:m.projects.filter(x=>x!==pid)}:m));};
-  const doAdd=()=>{if(!form.title.trim()||!form.client.trim())return;const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);setProjects(ps=>[...ps,{...form,id:Date.now(),crewIds:[],budget:Number(form.budget)||0,tags}]);setForm({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});setShowAdd(false);};
+  const upd=async(id,patch)=>{
+    if(!isAdmin)return;
+    const p=projects.find(x=>x.id===id);if(!p)return;
+    const next={...p,...patch};
+    setProjects(ps=>ps.map(x=>x.id===id?next:x));
+    await dbUpsertProject(next);
+  };
+  const addCrew=async(pid,cid,isNew)=>{
+    const proj=projects.find(p=>p.id===pid);if(!proj)return;
+    if(isNew){
+      const saved=await dbUpsertCrew({...cid,projects:[pid]});
+      setAllCrew(c=>[...c,saved]);
+      const next={...proj,crewIds:[...proj.crewIds,saved.id]};
+      setProjects(ps=>ps.map(p=>p.id===pid?next:p));
+      await dbUpsertProject(next);
+    } else {
+      const next={...proj,crewIds:[...proj.crewIds,cid]};
+      setProjects(ps=>ps.map(p=>p.id===pid?next:p));
+      await dbUpsertProject(next);
+      const cm=allCrew.find(m=>m.id===cid);
+      if(cm){const cu={...cm,projects:[...cm.projects,pid]};setAllCrew(c=>c.map(m=>m.id===cid?cu:m));await dbUpsertCrew(cu);}
+    }
+  };
+  const remCrew=async(pid,cid)=>{
+    const proj=projects.find(p=>p.id===pid);if(!proj)return;
+    const next={...proj,crewIds:proj.crewIds.filter(x=>x!==cid)};
+    setProjects(ps=>ps.map(p=>p.id===pid?next:p));
+    await dbUpsertProject(next);
+    const cm=allCrew.find(m=>m.id===cid);
+    if(cm){const cu={...cm,projects:cm.projects.filter(x=>x!==pid)};setAllCrew(c=>c.map(m=>m.id===cid?cu:m));await dbUpsertCrew(cu);}
+  };
+  const doAdd=async()=>{
+    if(!form.title.trim()||!form.client.trim())return;
+    const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
+    const saved=await dbUpsertProject({...form,crewIds:[],budget:Number(form.budget)||0,tags,id:Date.now()});
+    setProjects(ps=>[...ps,saved]);
+    setForm({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
+    setShowAdd(false);
+  };
   const selP=selected?projects.find(p=>p.id===selected.id):null;
+  if(loadingP)return <LoadingScreen msg="Loading projects…"/>;
+  if(errP)return <ErrScreen msg={errP}/>;
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
       <SC2 label="Projects" value={projects.length} color="var(--text)" icon="🎬" delay={0}/>
@@ -428,90 +511,72 @@ function ProjectsView({invoices,allCrew,setAllCrew,role,expTrackerUrl}){
 }
 
 /* ── FINANCE VIEW ── */
-function InvoiceCard({inv,onOpen,onUpdateAmount,onUpdateStatus}){
-  const rec=totalRec(inv);const pct=Math.min(100,inv.amount>0?(rec/inv.amount)*100:0);const sc=SC[inv.status]||SC["Pending"];
-  return(
-    <div className="card fade-up" style={{padding:"16px 18px",cursor:"pointer",position:"relative",overflow:"hidden"}} onClick={e=>{if(!e.target.closest("[data-nc]"))onOpen();}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:sc.dot}}/>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-        <div style={{minWidth:0,flex:1,marginRight:10}}>
-          <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{inv.project}</div>
-          <div style={{fontSize:12,color:"var(--text2)"}}>{inv.client}</div>
-          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginTop:2}}>{inv.invoiceNo}</div>
-        </div>
-        <div data-nc="1" onClick={e=>e.stopPropagation()}>
-          <StCell status={inv.status} onChange={onUpdateStatus}/>
-        </div>
-      </div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:rec>0&&rec<inv.amount?8:0}}>
-        <div data-nc="1" onClick={e=>e.stopPropagation()}>
-          <ACell value={inv.amount} onChange={onUpdateAmount}/>
-        </div>
-        <div style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Due {inv.due}</div>
-      </div>
-      {rec>0&&<div style={{marginTop:6}}>
-        <div style={{height:3,borderRadius:3,background:"var(--bg4)",overflow:"hidden",marginBottom:4}}>
-          <div style={{height:"100%",width:`${pct}%`,background:"var(--green)",borderRadius:3,transition:"width .4s"}}/>
-        </div>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div>
-      </div>}
-    </div>
-  );
-}
-
 function FinanceView(){
-  const[invoices,setInvoices]=usePersist("frameOS_invoices",SEED_INV);
+  const[rawInv,,loadingI,errI,refetchI]=useDB("invoices");
+  const[rawPay,,loadingP,,refetchP]=useDB("payments");
+  const invoices=rawInv.map(i=>mpI(i,rawPay));
   const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
   const[form,setForm]=useState({invoiceNo:"",project:"",client:"",amount:"",status:"Pending",due:""});
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
-  const upd=(id,patch)=>setInvoices(inv=>inv.map(i=>i.id===id?{...i,...patch}:i));
+  const upd=async(id,patch)=>{
+    const inv=invoices.find(i=>i.id===id);if(!inv)return;
+    const next={...inv,...patch};
+    if(patch.payments){
+      const existing=rawPay.filter(p=>Number(p.invoice_id)===Number(id));
+      for(const ep of existing){if(!next.payments.find(p=>p.id===ep.id))await dbDelPayment(ep.id);}
+      for(const np of next.payments){if(!existing.find(p=>p.id===np.id))await dbAddPayment(id,np);}
+      await dbUpsertInvoice({...next,payments:[]});
+      refetchP();refetchI();
+    } else {
+      await dbUpsertInvoice(next);
+      refetchI();
+    }
+  };
   const paid=invoices.filter(i=>i.status==="Paid").reduce((s,i)=>s+i.amount,0);
   const partial=invoices.filter(i=>i.status==="Partial").reduce((s,i)=>s+totalRec(i),0);
   const pending=invoices.filter(i=>["Pending","Partial"].includes(i.status)).reduce((s,i)=>s+(i.amount-totalRec(i)),0);
   const overdue=invoices.filter(i=>i.status==="Overdue").reduce((s,i)=>s+i.amount,0);
   const total=invoices.reduce((s,i)=>s+i.amount,0)||1;
-  const doAdd=()=>{if(!form.project.trim()||!form.amount)return;setInvoices(inv=>[...inv,{...form,id:Date.now(),amount:Number(form.amount),payments:[]}]);setForm({invoiceNo:"",project:"",client:"",amount:"",status:"Pending",due:""});setShowAdd(false);};
+  const doAdd=async()=>{
+    if(!form.project.trim()||!form.amount)return;
+    await dbUpsertInvoice({...form,amount:Number(form.amount),payments:[]});
+    refetchI();
+    setForm({invoiceNo:"",project:"",client:"",amount:"",status:"Pending",due:""});
+    setShowAdd(false);
+  };
   const expCSV=()=>{const rows=[["Invoice No","Project","Client","Total","Received","Status","Due"],...invoices.map(i=>[i.invoiceNo,i.project,i.client,i.amount,totalRec(i),i.status,i.due])];const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"}));a.download="invoices.csv";a.click();};
   const selInv=selected?invoices.find(i=>i.id===selected):null;
   const[isMobile,setIsMobile]=useState(()=>window.innerWidth<=768);
   useEffect(()=>{const h=()=>setIsMobile(window.innerWidth<=768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
-
+  if(loadingI||loadingP)return <LoadingScreen msg="Loading finance…"/>;
+  if(errI)return <ErrScreen msg={errI}/>;
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}} className="g4">
-      <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} paid`} color="var(--green)" icon="✓" delay={0}/>
-      <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} inv`} color="var(--orange)" icon="◑" delay={50}/>
-      <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length} inv`} color="var(--amber)" icon="⏳" delay={100}/>
-      <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} inv`} color="var(--red)" icon="⚠" delay={150}/>
+      <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} fully paid`} color="var(--green)" icon="✓" delay={0}/>
+      <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} invoices`} color="var(--orange)" icon="◑" delay={50}/>
+      <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length}`} color="var(--amber)" icon="⏳" delay={100}/>
+      <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} invoices`} color="var(--red)" icon="⚠" delay={150}/>
     </div>
     <div className="card" style={{padding:"16px 20px",marginBottom:18}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Revenue overview</span><span style={{fontSize:15,fontWeight:600,fontFamily:"'Geist Mono',monospace"}}>{fmt(total)} total</span></div>
       <div style={{height:5,borderRadius:5,overflow:"hidden",display:"flex",background:"var(--bg4)"}}>{[[paid+partial,"var(--green)"],[pending,"var(--amber)"],[overdue,"var(--red)"]].map(([v,c],idx)=><div key={idx} style={{width:`${(v/total)*100}%`,background:c,transition:"width .5s ease"}}/>)}</div>
-      <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
+      <div style={{display:"flex",gap:16,marginTop:10}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
     </div>
-    <div style={{display:"flex",gap:10,marginBottom:14}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New invoice</button><button className="btn-g" onClick={expCSV}>↓ CSV</button></div>
-
-    {/* MOBILE: card layout — no horizontal scroll */}
-    {isMobile?(
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {invoices.map(inv=><InvoiceCard key={inv.id} inv={inv} onOpen={()=>setSelected(inv.id)} onUpdateAmount={v=>upd(inv.id,{amount:v})} onUpdateStatus={st=>upd(inv.id,{status:st})}/>)}
+    <div style={{fontSize:12,color:"var(--text3)",marginBottom:12,fontFamily:"'Geist Mono',monospace"}}>✎ click amount · click badge · click row to open</div>
+    <div style={{display:"flex",gap:10,marginBottom:14}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New invoice</button><button className="btn-g" onClick={expCSV}>↓ Export CSV</button></div>
+    <div className="fscroll"><div className="card" style={{overflow:"visible"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",background:"var(--bg3)",borderBottom:"1px solid var(--border)",borderRadius:"12px 12px 0 0",minWidth:540}}>
+        {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
       </div>
-    ):(
-      /* DESKTOP: table layout */
-      <div className="card" style={{overflow:"visible"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",background:"var(--bg3)",borderBottom:"1px solid var(--border)",borderRadius:"12px 12px 0 0"}}>
-          {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
-        </div>
-        {invoices.map((inv,i)=>{const rec=totalRec(inv);return <div key={inv.id} className="row-h fade-up" style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",borderBottom:i<invoices.length-1?"1px solid var(--border)":"none",alignItems:"center",animationDelay:`${i*45}ms`,cursor:"pointer"}} onClick={e=>{if(!e.target.closest("[data-nc]"))setSelected(inv.id);}}>
-          <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
-          <div style={{padding:"13px 16px",fontSize:14,fontWeight:500,color:"var(--text)"}}>{inv.project}</div>
-          <div style={{padding:"13px 16px",fontSize:13,color:"var(--text2)"}}>{inv.client}</div>
-          <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
-          <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
-          <div data-nc="1" onClick={e=>e.stopPropagation()}><StCell status={inv.status} onChange={st=>upd(inv.id,{status:st})}/></div>
-        </div>;})}
-      </div>
-    )}
-
+      {invoices.map((inv,i)=>{const rec=totalRec(inv);return <div key={inv.id} className="row-h fade-up" style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",borderBottom:i<invoices.length-1?"1px solid var(--border)":"none",alignItems:"center",animationDelay:`${i*45}ms`,cursor:"pointer",minWidth:540}} onClick={e=>{if(!e.target.closest("[data-nc]"))setSelected(inv.id);}}>
+        <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
+        <div style={{padding:"13px 16px",fontSize:14,fontWeight:500,color:"var(--text)"}}>{inv.project}</div>
+        <div style={{padding:"13px 16px",fontSize:13,color:"var(--text2)"}}>{inv.client}</div>
+        <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
+        <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
+        <div data-nc="1" onClick={e=>e.stopPropagation()}><StCell status={inv.status} onChange={st=>upd(inv.id,{status:st})}/></div>
+      </div>;})}
+    </div></div>
     {selInv&&<InvPanel invoice={selInv} onClose={()=>setSelected(null)} onUpdate={upd}/>}
     {showAdd&&<Modal title="New invoice" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><Lbl ch="Invoice number"/><Inp value={form.invoiceNo} onChange={fset("invoiceNo")} placeholder="INV-2026-005"/></div>
@@ -527,8 +592,8 @@ function FinanceView(){
 /* ── CLIENTS VIEW ── */
 function ClientsView({role}){
   const isAdmin=role==="admin";
-  const projects=LS.get("frameOS_projects",SEED_PROJECTS);
-  const invoices=LS.get("frameOS_invoices",SEED_INV);
+  const[rawProj]=useDB("projects",mpP);const[rawInvC]=useDB("invoices");const[rawPayC]=useDB("payments");
+  const projects=rawProj;const invoices=rawInvC.map(i=>mpI(i,rawPayC));
   const[selected,setSelected]=useState(null);
   const names=[...new Set([...projects.map(p=>p.client),...invoices.map(i=>i.client)])];
   const clients=names.map((name,idx)=>{const cP=projects.filter(p=>p.client===name);const cI=invoices.filter(i=>i.client===name);const tb=cI.reduce((s,i)=>s+i.amount,0);const tr=cI.reduce((s,i)=>s+totalRec(i),0);return{name,projects:cP,invoices:cI,totalBilled:tb,totalReceived:tr,outstanding:tb-tr,hasOverdue:cI.some(i=>i.status==="Overdue"),hasPending:cI.some(i=>["Pending","Partial"].includes(i.status)),isRegular:cP.length>=2,idx};});
@@ -559,7 +624,7 @@ function ClientsView({role}){
       </div>;})}
     </div>
     {sel&&(<><div className="povl" onClick={()=>setSelected(null)}/><div className="panel">
-      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
             <div style={{width:52,height:52,borderRadius:14,background:BRAND_GRADS[sel.idx%BRAND_GRADS.length],display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 6px 20px rgba(0,0,0,.4)"}}><span style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.92)"}}>{sel.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</span></div>
@@ -586,9 +651,26 @@ function CrewView({allCrew,setAllCrew,projects,role}){
   const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
   const[form,setForm]=useState({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=allCrew.filter(c=>(filterR==="All"||c.role===filterR)&&(c.name.toLowerCase().includes(search.toLowerCase())||c.role.toLowerCase().includes(search.toLowerCase())));
-  const updM=(id,patch)=>{if(!isAdmin)return;setAllCrew(c=>c.map(m=>m.id===id?{...m,...patch}:m));};
-  const delM=(id)=>{if(!isAdmin)return;setAllCrew(c=>c.filter(m=>m.id!==id));};
-  const doAdd=()=>{if(!form.name.trim())return;const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);setAllCrew(c=>[...c,{...form,id:Date.now(),tags,projects:[]}]);setForm({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});setShowAdd(false);};
+  const updM=async(id,patch)=>{
+    if(!isAdmin)return;
+    const m=allCrew.find(x=>x.id===id);if(!m)return;
+    const next={...m,...patch};
+    setAllCrew(c=>c.map(x=>x.id===id?next:x));
+    await dbUpsertCrew(next);
+  };
+  const delM=async(id)=>{
+    if(!isAdmin)return;
+    setAllCrew(c=>c.filter(m=>m.id!==id));
+    await dbDeleteCrew(id);
+  };
+  const doAdd=async()=>{
+    if(!form.name.trim())return;
+    const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
+    const saved=await dbUpsertCrew({...form,tags,projects:[],id:Date.now()});
+    setAllCrew(c=>[...c,saved]);
+    setForm({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});
+    setShowAdd(false);
+  };
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
       <SC2 label="Total crew" value={allCrew.length} color="var(--text)" icon="👥" delay={0}/>
@@ -622,7 +704,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
       const m=allCrew.find(x=>x.id===selected);if(!m)return null;
       const cP=projects.filter(p=>m.projects.includes(p.id));const idx=allCrew.findIndex(x=>x.id===selected);
       return <><div className="povl" onClick={()=>setSelected(null)}/><div className="panel" style={{width:460}}>
-        <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+        <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}><Av name={m.name} idx={idx} size={46}/><div><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:4}}>{m.name}</div><RBadge role={m.role}/>{m.phone&&<div style={{fontSize:12,color:"var(--text2)",marginTop:5,display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{m.phone}</span></div>}</div></div>
             <div style={{display:"flex",gap:8}}>
@@ -662,16 +744,33 @@ function CrewView({allCrew,setAllCrew,projects,role}){
 /* ── QUOTES VIEW ── */
 const QLCATS=["Day Rate","Equipment","Travel","Post Production","Studio","Talent","Props & Art","Catering","Miscellaneous"];
 function QuotesView({projects}){
-  const[quotes,setQuotes]=usePersist("frameOS_quotes",[]);
+  const[quotes,setQuotes,loadingQ,,refetchQ]=useDB("quotes",mpQ);
   const[selected,setSelected]=useState(null);const[showAdd,setShowAdd]=useState(false);
   const[form,setForm]=useState({title:"",client:"",project:"",validUntil:"",taxPct:"18",notes:"",status:"Draft"});
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const sub=q=>(q.lines||[]).reduce((s,l)=>s+(l.qty*l.rate),0);
   const tax=q=>sub(q)*((Number(q.taxPct)||0)/100);
   const grand=q=>{const s=sub(q);return s+(s*(Number(q.taxPct)||0)/100);};
-  const create=()=>{if(!form.title.trim()||!form.client.trim())return;const q={...form,id:Date.now(),taxPct:Number(form.taxPct)||0,lines:[{id:1,desc:"",cat:"Day Rate",qty:1,rate:0}],createdAt:new Date().toISOString().split("T")[0]};setQuotes(qs=>[...qs,q]);setForm({title:"",client:"",project:"",validUntil:"",taxPct:"18",notes:"",status:"Draft"});setShowAdd(false);setTimeout(()=>setSelected(q.id),50);};
-  const updQ=(id,patch)=>setQuotes(qs=>qs.map(q=>q.id===id?{...q,...patch}:q));
-  const delQ=(id)=>{setQuotes(qs=>qs.filter(q=>q.id!==id));if(selected===id)setSelected(null);};
+  const create=async()=>{
+    if(!form.title.trim()||!form.client.trim())return;
+    const q={...form,taxPct:Number(form.taxPct)||18,lines:[{id:1,desc:"",cat:"Day Rate",qty:1,rate:0}],createdAt:new Date().toISOString().split("T")[0],id:Date.now()};
+    const newId=await dbUpsertQuote(q);
+    await refetchQ();
+    setForm({title:"",client:"",project:"",validUntil:"",taxPct:"18",notes:"",status:"Draft"});
+    setShowAdd(false);
+    setTimeout(()=>setSelected(newId),120);
+  };
+  const updQ=async(id,patch)=>{
+    const q=quotes.find(x=>x.id===id);if(!q)return;
+    const next={...q,...patch};
+    setQuotes(qs=>qs.map(x=>x.id===id?next:x));
+    await dbUpsertQuote(next);
+  };
+  const delQ=async(id)=>{
+    setQuotes(qs=>qs.filter(q=>q.id!==id));
+    if(selected===id)setSelected(null);
+    await dbDelQuote(id);
+  };
   const dlQ=(q)=>{const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quote — ${q.title}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:13px;color:#000;background:#fff;}.page{max-width:800px;margin:0 auto;padding:32px;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;border-bottom:3px solid #000;padding-bottom:20px;}.co{font-size:22px;font-weight:900;}.co-s{font-size:10px;letter-spacing:0.15em;color:#555;margin-top:3px;}.qt{font-size:28px;font-weight:900;color:#e4002b;text-align:right;}.meta{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}.mb{font-size:12px;line-height:1.8;}.mb b{display:block;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}th{background:#000;color:#fff;padding:9px 12px;font-size:11px;text-align:left;letter-spacing:0.06em;}td{padding:9px 12px;border-bottom:1px solid #ddd;font-size:12px;}.ts{border-top:2px solid #000;padding-top:12px;}.tr{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;}.grand{font-weight:900;font-size:16px;border-top:2px solid #000;padding-top:8px;margin-top:8px;}.foot{margin-top:32px;font-size:11px;color:#888;border-top:1px solid #ddd;padding-top:12px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div class="page"><div class="header"><div><div class="co">FRAME OS</div><div class="co-s">PRODUCTION SUITE</div></div><div><div class="qt">ESTIMATE</div><div style="font-size:11px;text-align:right;margin-top:6px;color:#555;">Quote #${q.id.toString().slice(-6)}<br>Date: ${q.createdAt}<br>Valid until: ${q.validUntil||"30 days"}</div></div></div><div class="meta"><div class="mb"><b>Prepared for</b>${q.client}${q.project?`<br>${q.project}`:""}</div><div class="mb"><b>Status</b><span style="background:${q.status==="Approved"?"#30d158":q.status==="Sent"?"#3a8ef6":"#666"};color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">${q.status}</span></div></div><table><thead><tr><th style="width:40%">Description</th><th>Category</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead><tbody>${(q.lines||[]).map((l,i)=>`<tr style="${i%2===1?"background:#f9f9f9":""}"><td>${l.desc||"—"}</td><td style="color:#666">${l.cat}</td><td style="text-align:center">${l.qty}</td><td style="text-align:right">₹${Number(l.rate).toLocaleString("en-IN")}</td><td style="text-align:right;font-weight:600">₹${(l.qty*l.rate).toLocaleString("en-IN")}</td></tr>`).join("")}</tbody></table><div class="ts"><div class="tr"><span>Subtotal</span><span>₹${sub(q).toLocaleString("en-IN")}</span></div><div class="tr"><span>GST (${q.taxPct}%)</span><span>₹${tax(q).toLocaleString("en-IN")}</span></div><div class="tr grand"><span>TOTAL</span><span>₹${grand(q).toLocaleString("en-IN")}</span></div></div>${q.notes?`<div style="margin-top:20px;font-size:12px;background:#f9f9f9;padding:12px;border-left:3px solid #e4002b;"><b>Notes:</b> ${q.notes}</div>`:""}<div class="foot">This is an estimate. Valid for ${q.validUntil||"30 days"} from date of issue.</div></div></body></html>`;const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));a.download=`Quote_${q.title.replace(/\s+/g,"_")}.html`;a.click();};
   const selQ=selected?quotes.find(q=>q.id===selected):null;
   return(<div>
@@ -695,7 +794,7 @@ function QuotesView({projects}){
       </div>)}
     </div>
     {selQ&&(<><div className="povl" onClick={()=>setSelected(null)}/><div className="panel" style={{width:580}}>
-      <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
+      <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div><div style={{fontSize:17,fontWeight:700,color:"var(--text)"}}>{selQ.title}</div><div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{selQ.client}{selQ.project&&` · ${selQ.project}`}</div></div>
           <div style={{display:"flex",gap:8}}>
@@ -739,280 +838,11 @@ function QuotesView({projects}){
 }
 
 
-/* ── ABOUT PAGE ── */
-const SEED_ABOUT={
-  name:"Aki Mehta",title:"Project Manager & Content Strategist",
-  studio:LS.get("frameOS_studioName","Frame OS"),tagline:"Journey Curators",
-  phone:"+91 70212 91405",email:"yashmehtaoffice@gmail.com",website:"yashmehtawork.netlify.app",
-  services:"TVC Production · Brand Films · Product Shoots · Digital Content · Travel Content",
-  bio:"Passionate about crafting visual stories that resonate. With 4+ years across events, tourism, and media production, I bring both creative vision and production discipline to every project.",
-  instagram:"linktr.ee/MehtaYash",linkedin:"linkedin.com/in/yash-mehta",
-  logoColor:"#1a2f6e",
-};
-
-function AboutView({role}){
-  const isAdmin=role==="admin";
-  const[about,setAbout]=usePersist("frameOS_about",SEED_ABOUT);
-  const[editing,setEditing]=useState(false);
-  const[draft,setDraft]=useState(about);
-  const ds=k=>v=>setDraft(d=>({...d,[k]:v}));
-  const save=()=>{setAbout(draft);setEditing(false);};
-  const cancel=()=>{setDraft(about);setEditing(false);};
-  const initials=(about.studio||"FO").substring(0,2).toUpperCase();
-  const nameInitials=(about.name||"A").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
-
-  return(
-    <div style={{maxWidth:680,margin:"0 auto"}}>
-      {/* Hero card */}
-      <div className="card fade-up" style={{padding:"32px 28px",marginBottom:16,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,var(--accent),var(--purple))"}}/>
-        <div style={{display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
-          {/* Avatar */}
-          <div style={{width:72,height:72,borderRadius:20,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{nameInitials}</div>
-          <div style={{flex:1,minWidth:0}}>
-            {editing?(
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <Inp value={draft.name} onChange={ds("name")} placeholder="Your name"/>
-                <Inp value={draft.title} onChange={ds("title")} placeholder="Your title / role"/>
-              </div>
-            ):(
-              <>
-                <div style={{fontSize:22,fontWeight:700,color:"var(--text)",marginBottom:4}}>{about.name}</div>
-                <div style={{fontSize:14,color:"var(--text2)"}}>{about.title}</div>
-              </>
-            )}
-          </div>
-          {isAdmin&&!editing&&<button className="btn-g" style={{fontSize:12,padding:"6px 14px",flexShrink:0}} onClick={()=>{setDraft(about);setEditing(true);}}>✎ Edit</button>}
-        </div>
-        {editing&&<div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}><button className="btn-g" style={{fontSize:12}} onClick={cancel}>Cancel</button><button className="btn-p" style={{fontSize:12}} onClick={save}>Save changes</button></div>}
-      </div>
-
-      {/* Production house card */}
-      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"40ms"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Production House</div>
-        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:16}}>
-          <div style={{width:52,height:52,borderRadius:14,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0,boxShadow:"0 4px 14px rgba(0,0,0,.2)"}}>{initials}</div>
-          <div style={{flex:1,minWidth:0}}>
-            {editing?(
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <Inp value={draft.studio} onChange={ds("studio")} placeholder="Production house name"/>
-                <Inp value={draft.tagline} onChange={ds("tagline")} placeholder="Tagline e.g. Journey Curators"/>
-              </div>
-            ):(
-              <>
-                <div style={{fontSize:18,fontWeight:700,color:"var(--text)"}}>{about.studio||"Frame OS"}</div>
-                <div style={{fontSize:13,color:"var(--text2)",fontStyle:"italic"}}>{about.tagline}</div>
-              </>
-            )}
-          </div>
-          {editing&&<div><Lbl ch="Logo colour"/><input type="color" value={about.logoColor||"#1a2f6e"} onChange={e=>setDraft(d=>({...d,logoColor:e.target.value}))} style={{width:36,height:36,border:"none",borderRadius:8,cursor:"pointer",background:"transparent"}}/></div>}
-        </div>
-        {editing?(
-          <div><Lbl ch="Bio / About"/><TA value={draft.bio} onChange={ds("bio")} placeholder="A short bio about you and your work…"/></div>
-        ):(
-          about.bio&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.8,background:"var(--bg3)",borderRadius:9,padding:"12px 14px"}}>{about.bio}</div>
-        )}
-      </div>
-
-      {/* Contact card */}
-      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"80ms"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
-        {editing?(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="g2">
-              <div><Lbl ch="Phone"/><Inp value={draft.phone} onChange={ds("phone")} placeholder="+91 98765 43210"/></div>
-              <div><Lbl ch="Email"/><Inp value={draft.email} onChange={ds("email")} placeholder="email@example.com"/></div>
-            </div>
-            <div><Lbl ch="Website"/><Inp value={draft.website} onChange={ds("website")} placeholder="yoursite.com"/></div>
-          </div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {[["📞",about.phone],["✉",about.email],["🌐",about.website]].filter(([,v])=>v).map(([icon,val])=>(
-              <div key={val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",borderRadius:9}}>
-                <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-                <span style={{fontSize:13,color:"var(--text)",fontFamily:icon==="✉"||icon==="🌐"?"'Geist Mono',monospace":"inherit"}}>{val}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Services card */}
-      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"120ms"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Services</div>
-        {editing?(
-          <Inp value={draft.services} onChange={ds("services")} placeholder="TVC · Brand Films · Product Shoots · Digital Content"/>
-        ):(
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {(about.services||"").split("·").map(s=>s.trim()).filter(Boolean).map(s=>(
-              <span key={s} style={{fontSize:12,fontFamily:"'Geist Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"4px 12px"}}>{s}</span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Social links card */}
-      <div className="card fade-up" style={{padding:"24px 28px",animationDelay:"160ms"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Social & Links</div>
-        {editing?(
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div><Lbl ch="Instagram / Linktree"/><Inp value={draft.instagram} onChange={ds("instagram")} placeholder="linktr.ee/yourname"/></div>
-            <div><Lbl ch="LinkedIn"/><Inp value={draft.linkedin} onChange={ds("linkedin")} placeholder="linkedin.com/in/yourname"/></div>
-          </div>
-        ):(
-          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-            {[["🔗",about.instagram,"Linktree"],["💼",about.linkedin,"LinkedIn"]].filter(([,v])=>v).map(([icon,val,label])=>(
-              <a key={label} href={val.startsWith("http")?"https://"+val.replace(/^https?:\/\//,""):("https://"+val)} target="_blank" rel="noreferrer"
-                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,textDecoration:"none",color:"var(--text)",fontSize:13,transition:"border-color .15s"}}
-                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--accent)"}
-                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
-                <span style={{fontSize:16}}>{icon}</span><span>{label}</span><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginLeft:4}}>{val}</span>
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-/* ── SPLASH SCREEN — cinematic typewriter ── */
-function SplashScreen({onDone,studioName}){
-  const FULL="AKI";
-  const[typed,setTyped]=useState("");
-  const[showCursor,setShowCursor]=useState(true);
-  const[showSub,setShowSub]=useState(false);
-  const[fading,setFading]=useState(false);
-
-  useEffect(()=>{
-    // Type each letter: A at 300ms, K at 580ms, I at 860ms
-    const delays=[300,580,860];
-    const timers=[];
-    delays.forEach((d,i)=>{
-      timers.push(setTimeout(()=>setTyped(FULL.slice(0,i+1)),d));
-    });
-    // Hold — show studio name at 1200ms
-    timers.push(setTimeout(()=>setShowSub(true),1200));
-    // Cursor blinks a few times then stops at 1600ms
-    timers.push(setTimeout(()=>setShowCursor(false),1700));
-    // Fade out at 2200ms, done at 2600ms
-    timers.push(setTimeout(()=>setFading(true),2200));
-    timers.push(setTimeout(()=>onDone(),2600));
-    return()=>timers.forEach(clearTimeout);
-  },[]);
-
-  return(
-    <div style={{
-      position:"fixed",inset:0,
-      background:"#0c0c0e",
-      display:"flex",flexDirection:"column",
-      alignItems:"center",justifyContent:"center",
-      zIndex:999,
-      opacity:fading?0:1,
-      transition:"opacity 0.4s ease",
-      userSelect:"none",
-    }}>
-      {/* Name row */}
-      <div style={{
-        display:"flex",alignItems:"flex-end",
-        marginBottom:28,
-        minHeight:"clamp(80px,20vw,130px)",
-      }}>
-        <span style={{
-          fontSize:"clamp(80px,20vw,128px)",
-          fontWeight:800,
-          fontFamily:"'Geist',sans-serif",
-          letterSpacing:"0.04em",
-          color:"#f2f2f7",
-          lineHeight:1,
-        }}>{typed}</span>
-        {/* Blinking cursor */}
-        <span style={{
-          display:"inline-block",
-          width:"clamp(4px,1vw,6px)",
-          height:"clamp(56px,14vw,90px)",
-          background:"#3a8ef6",
-          marginLeft:6,
-          marginBottom:4,
-          borderRadius:2,
-          opacity:showCursor?1:0,
-          animation:showCursor?"cursorBlink 0.6s step-end infinite":"none",
-          transition:"opacity 0.2s ease",
-          flexShrink:0,
-        }}/>
-      </div>
-
-      {/* Divider line */}
-      <div style={{
-        width:showSub?52:0,
-        height:"1px",
-        background:"linear-gradient(90deg,transparent,rgba(58,142,246,0.7),transparent)",
-        transition:"width 0.5s cubic-bezier(.32,.72,0,1)",
-        marginBottom:16,
-      }}/>
-
-      {/* Studio name */}
-      <div style={{
-        fontSize:11,
-        fontFamily:"'Geist Mono',monospace",
-        letterSpacing:"0.32em",
-        textTransform:"uppercase",
-        color:"#6e6e73",
-        opacity:showSub?1:0,
-        transition:"opacity 0.5s ease 0.15s",
-      }}>{studioName||"Frame OS"}</div>
-
-      <style>{`@keyframes cursorBlink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
-    </div>
-  );
-}
-
-/* ── AUTH: LOCK + CHANGE PASS ── */
-function LockScreen({onUnlock,studioName}){
-  const[pass,setPass]=useState("");const[err,setErr]=useState(false);const[shake,setShake]=useState(false);const ref=useRef();
-  useEffect(()=>{setTimeout(()=>ref.current?.focus(),100);},[]);
-  const attempt=()=>{const role=onUnlock(pass);if(role){setErr(false);}else{setErr(true);setShake(true);setPass("");setTimeout(()=>setShake(false),600);}};
-  return(<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{width:360,animation:"fadeUp .4s ease"}}>
-      <div style={{textAlign:"center",marginBottom:32}}>
-        <div style={{width:60,height:60,borderRadius:16,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px"}}>🎞</div>
-        <div style={{fontSize:22,fontWeight:700,color:"var(--text)",marginBottom:6}}>{studioName||"Frame OS"}</div>
-        <div style={{fontSize:13,color:"var(--text2)"}}>Enter your password to continue</div>
-      </div>
-      <div style={{animation:shake?"shake .4s ease":"none"}}>
-        <input ref={ref} type="password" className="input" value={pass} onChange={e=>{setPass(e.target.value);setErr(false);}} onKeyDown={e=>{if(e.key==="Enter")attempt();}} placeholder="Password" style={{textAlign:"center",fontSize:18,letterSpacing:"0.2em",marginBottom:12}}/>
-        {err&&<div style={{fontSize:12,color:"var(--red)",textAlign:"center",marginBottom:10}}>Incorrect password. Try again.</div>}
-        <button className="btn-p" style={{width:"100%",padding:"11px",fontSize:15}} onClick={attempt}>Unlock</button>
-      </div>
-      <div style={{marginTop:20,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Access levels</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--accent)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Admin</b> — full access, edit everything</span></div>
-          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--green)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Viewer</b> — read-only, no financial data</span></div>
-        </div>
-      </div>
-    </div>
-  </div>);
-}
-
-function ChangePassModal({onClose,onSave,viewerPassword,onSaveViewer}){
-  const[tab,setTab]=useState("admin");
-  const[cur,setCur]=useState("");const[next,setNext]=useState("");const[conf,setConf]=useState("");const[err,setErr]=useState("");
-  const[vcur,setVcur]=useState("");const[vnext,setVnext]=useState("");const[vconf,setVconf]=useState("");const[verr,setVerr]=useState("");
-  const saveA=()=>{if(!cur||!next){setErr("Fill all fields.");return;}if(next!==conf){setErr("Passwords don't match.");return;}if(next.length<4){setErr("Min 4 characters.");return;}onSave(cur,next);setErr("");};
-  const saveV=()=>{if(!vcur||!vnext){setVerr("Fill all fields.");return;}if(vnext!==vconf){setVerr("Passwords don't match.");return;}if(vnext.length<4){setVerr("Min 4 characters.");return;}onSaveViewer(vcur,vnext);setVerr("");};
-  return(<Modal title="Manage passwords" onClose={onClose} width={440}>
-    <div style={{display:"flex",gap:4,marginBottom:18}}>{[["admin","🔒 Admin"],["viewer","👁 Viewer"]].map(([id,label])=><button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"7px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"'Geist',sans-serif",background:tab===id?"var(--accent)":"var(--bg4)",color:tab===id?"#fff":"var(--text2)",border:`1px solid ${tab===id?"var(--accent)":"var(--border)"}`}}>{label}</button>)}</div>
-    {tab==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Admin password unlocks full access — edit, add, delete everything.</div><div><Lbl ch="Current admin password"/><Inp type="password" value={cur} onChange={setCur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={next} onChange={setNext} placeholder="••••••••"/></div><div><Lbl ch="Confirm new"/><Inp type="password" value={conf} onChange={setConf} placeholder="••••••••"/></div>{err&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",borderRadius:8,padding:"8px 12px"}}>{err}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveA}>Update admin password</button></div></div>}
-    {tab==="viewer"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--green-bg)",border:"1px solid rgba(48,209,88,.2)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Viewer password gives read-only access — no financial data, no editing.</div><div><Lbl ch="Current viewer password"/><Inp type="password" value={vcur} onChange={setVcur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={vnext} onChange={setVnext} placeholder="••••••••"/></div><div><Lbl ch="Confirm new"/><Inp type="password" value={vconf} onChange={setVconf} placeholder="••••••••"/></div>{verr&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",borderRadius:8,padding:"8px 12px"}}>{verr}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveV}>Update viewer password</button></div></div>}
-  </Modal>);
-}
-
-/* ── SIDEBAR ── */
+/* ── NAV ARRAYS ── */
 const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 
+/* ── SIDEBAR ── */
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
   const isAdmin=role==="admin";const W=collapsed?60:220;const NAV=isAdmin?NAV_A:NAV_V;
   const[editName,setEditName]=useState(false);const[draft,setDraft]=useState(studioName);const nameRef=useRef();
@@ -1023,7 +853,7 @@ function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,rol
       {!collapsed&&<div style={{display:"flex",alignItems:"center",gap:10,overflow:"hidden",flex:1,minWidth:0}}>
         <div style={{width:32,height:32,borderRadius:9,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎞</div>
         <div style={{overflow:"hidden",flex:1,minWidth:0}}>
-          {editName&&isAdmin?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:15,fontWeight:700,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>:<div style={{display:"flex",alignItems:"center",gap:4,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}} title={isAdmin?"Click to rename":""}><div style={{fontSize:15,fontWeight:700,color:"var(--text)",lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studioName}</div>{isAdmin&&<span style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>✎</span>}</div>}
+          {editName&&isAdmin?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:15,fontWeight:700,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>:<div style={{display:"flex",alignItems:"center",gap:4,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}}><div style={{fontSize:15,fontWeight:700,color:"var(--text)",lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studioName}</div>{isAdmin&&<span style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>✎</span>}</div>}
           <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",marginTop:2,whiteSpace:"nowrap"}}>PRODUCTION</div>
         </div>
       </div>}
@@ -1033,30 +863,161 @@ function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,rol
     <div style={{flex:1,padding:collapsed?"12px 8px":"14px 10px"}}>
       {!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>WORKSPACE</div>}
       {NAV.map(n=>{const act=tab===n.id;return <button key={n.id} className={`nav-s${act?" active":""}`} onClick={()=>setTab(n.id)} title={collapsed?n.label:""} style={{justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2,position:"relative"}}>{act&&!collapsed&&<span style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:2.5,borderRadius:3,background:"var(--accent)"}}/>}<span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:act?600:400,lineHeight:1.2,color:act?"var(--text)":"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:11,color:"var(--text3)",marginTop:1,whiteSpace:"nowrap"}}>{n.sub}</div></div>}</button>;})}
-      {isAdmin&&<><div style={{borderTop:"1px solid var(--border)",margin:"14px 0 10px"}}/>{!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>COMING SOON</div>}{[{label:"Assets",icon:"📁"}].map(n=><div key={n.label} className="nav-s" title={collapsed?n.label:""} style={{opacity:.35,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2}}><span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginTop:1}}>SOON</div></div>}</div>)}</>}
+      {isAdmin&&<><div style={{borderTop:"1px solid var(--border)",margin:"14px 0 10px"}}/>{!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>COMING SOON</div>}<div className="nav-s" style={{opacity:.35,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px"}}><span style={{fontSize:17,flexShrink:0,lineHeight:1}}>📁</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap"}}>Assets</div><div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginTop:1}}>SOON</div></div>}</div></>}
     </div>
-    {!collapsed?<div style={{padding:"0 10px"}}><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:11,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}><div style={{width:28,height:28,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",flexShrink:0}}>{isAdmin?"A":"V"}</div><div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap"}}>{isAdmin?"Aki Mehta":"Viewer"}</div><div style={{fontSize:11,color:"var(--text3)",whiteSpace:"nowrap"}}>{isAdmin?"Admin · Full access":"Read only"}</div></div></div></div>:<div style={{display:"flex",justifyContent:"center",padding:"0 0 4px"}}><div title={isAdmin?"Admin":"Viewer"} style={{width:32,height:32,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",cursor:"default"}}>{isAdmin?"A":"V"}</div></div>}
+    {!collapsed?<div style={{padding:"0 10px"}}><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:11,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}><div style={{width:28,height:28,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",flexShrink:0}}>{isAdmin?"A":"V"}</div><div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap"}}>{isAdmin?"Aki Mehta":"Viewer"}</div><div style={{fontSize:11,color:"var(--text3)",whiteSpace:"nowrap"}}>{isAdmin?"Admin · Full access":"Read only"}</div></div></div></div>:<div style={{display:"flex",justifyContent:"center",padding:"0 0 4px"}}><div style={{width:32,height:32,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",cursor:"default"}}>{isAdmin?"A":"V"}</div></div>}
   </nav>);
+}
+
+/* ── ABOUT VIEW ── */
+function AboutView({role}){
+  const isAdmin=role==="admin";
+  const[rawAbout,,loadingA]=useDB("about");
+  const def={name:"Aki Mehta",title:"Project Manager & Content Strategist",studio:"Frame OS",tagline:"Journey Curators",phone:"+91 70212 91405",email:"yashmehtaoffice@gmail.com",website:"yashmehtawork.netlify.app",services:"TVC Production · Brand Films · Product Shoots · Digital Content",bio:"",instagram:"linktr.ee/MehtaYash",linkedin:"",logoColor:"#1a2f6e"};
+  const[about,setAbout]=useState(def);
+  useEffect(()=>{if(rawAbout.length>0)setAbout(mpA(rawAbout[0]));},[rawAbout]);
+  const[editing,setEditing]=useState(false);
+  const[draft,setDraft]=useState(about);
+  useEffect(()=>{if(!editing)setDraft(about);},[about]);
+  const ds=k=>v=>setDraft(d=>({...d,[k]:v}));
+  const save=async()=>{setAbout(draft);await dbSaveAbout(draft);setEditing(false);};
+  const cancel=()=>{setDraft(about);setEditing(false);};
+  const initials=(about.studio||"FO").substring(0,2).toUpperCase();
+  const nameInitials=(about.name||"A").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+  if(loadingA)return <LoadingScreen msg="Loading profile…"/>;
+  return(
+    <div style={{maxWidth:680,margin:"0 auto"}}>
+      <div className="card fade-up" style={{padding:"32px 28px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,var(--accent),var(--purple))"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+          <div style={{width:72,height:72,borderRadius:20,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{nameInitials}</div>
+          <div style={{flex:1,minWidth:0}}>
+            {editing?<div style={{display:"flex",flexDirection:"column",gap:8}}><Inp value={draft.name} onChange={ds("name")} placeholder="Your name"/><Inp value={draft.title} onChange={ds("title")} placeholder="Your title"/></div>:<><div style={{fontSize:22,fontWeight:700,color:"var(--text)",marginBottom:4}}>{about.name}</div><div style={{fontSize:14,color:"var(--text2)"}}>{about.title}</div></>}
+          </div>
+          {isAdmin&&!editing&&<button className="btn-g" style={{fontSize:12,padding:"6px 14px",flexShrink:0}} onClick={()=>{setDraft(about);setEditing(true);}}>Edit</button>}
+        </div>
+        {editing&&<div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}><button className="btn-g" style={{fontSize:12}} onClick={cancel}>Cancel</button><button className="btn-p" style={{fontSize:12}} onClick={save}>Save</button></div>}
+      </div>
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"40ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Production House</div>
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:16}}>
+          <div style={{width:52,height:52,borderRadius:14,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0}}>{initials}</div>
+          <div style={{flex:1,minWidth:0}}>
+            {editing?<div style={{display:"flex",flexDirection:"column",gap:8}}><Inp value={draft.studio} onChange={ds("studio")} placeholder="Studio name"/><Inp value={draft.tagline} onChange={ds("tagline")} placeholder="Tagline"/></div>:<><div style={{fontSize:18,fontWeight:700,color:"var(--text)"}}>{about.studio}</div><div style={{fontSize:13,color:"var(--text2)",fontStyle:"italic"}}>{about.tagline}</div></>}
+          </div>
+          {editing&&<div><Lbl ch="Colour"/><input type="color" value={draft.logoColor||"#1a2f6e"} onChange={e=>setDraft(d=>({...d,logoColor:e.target.value}))} style={{width:36,height:36,border:"none",borderRadius:8,cursor:"pointer",background:"transparent"}}/></div>}
+        </div>
+        {editing?<div><Lbl ch="Bio"/><TA value={draft.bio} onChange={ds("bio")} placeholder="A short bio…"/></div>:about.bio&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.8,background:"var(--bg3)",borderRadius:9,padding:"12px 14px"}}>{about.bio}</div>}
+      </div>
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"80ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
+        {editing?<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="g2"><div><Lbl ch="Phone"/><Inp value={draft.phone} onChange={ds("phone")} placeholder="+91 98765 43210"/></div><div><Lbl ch="Email"/><Inp value={draft.email} onChange={ds("email")} placeholder="email@example.com"/></div></div>
+          <div><Lbl ch="Website"/><Inp value={draft.website} onChange={ds("website")} placeholder="yoursite.com"/></div>
+        </div>:<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {[["📞",about.phone],["✉",about.email],["🌐",about.website]].filter(([,v])=>v).map(([icon,val])=><div key={val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",borderRadius:9}}><span style={{fontSize:16,flexShrink:0}}>{icon}</span><span style={{fontSize:13,color:"var(--text)"}}>{val}</span></div>)}
+        </div>}
+      </div>
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"120ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Services</div>
+        {editing?<Inp value={draft.services} onChange={ds("services")} placeholder="TVC · Brand Films · Product Shoots"/>:<div style={{display:"flex",flexWrap:"wrap",gap:8}}>{(about.services||"").split("·").map(s=>s.trim()).filter(Boolean).map(s=><span key={s} style={{fontSize:12,fontFamily:"'Geist Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"4px 12px"}}>{s}</span>)}</div>}
+      </div>
+      <div className="card fade-up" style={{padding:"24px 28px",animationDelay:"160ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Social & Links</div>
+        {editing?<div style={{display:"flex",flexDirection:"column",gap:10}}><div><Lbl ch="Instagram / Linktree"/><Inp value={draft.instagram} onChange={ds("instagram")} placeholder="linktr.ee/yourname"/></div><div><Lbl ch="LinkedIn"/><Inp value={draft.linkedin} onChange={ds("linkedin")} placeholder="linkedin.com/in/yourname"/></div></div>:<div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+          {[["🔗",about.instagram,"Linktree"],["💼",about.linkedin,"LinkedIn"]].filter(([,v])=>v).map(([icon,val,label])=><a key={label} href={"https://"+val.replace(/^https?:\/\//,"")} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,textDecoration:"none",color:"var(--text)",fontSize:13}}><span style={{fontSize:16}}>{icon}</span><span>{label}</span></a>)}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+/* ── SPLASH SCREEN ── */
+function SplashScreen({onDone,studioName}){
+  const FULL="AKI";
+  const[typed,setTyped]=useState("");const[showCursor,setShowCursor]=useState(true);const[showSub,setShowSub]=useState(false);const[fading,setFading]=useState(false);
+  useEffect(()=>{
+    const t=[];
+    [300,580,860].forEach((d,i)=>t.push(setTimeout(()=>setTyped(FULL.slice(0,i+1)),d)));
+    t.push(setTimeout(()=>setShowSub(true),1200));
+    t.push(setTimeout(()=>setShowCursor(false),1700));
+    t.push(setTimeout(()=>setFading(true),2200));
+    t.push(setTimeout(()=>onDone(),2600));
+    return()=>t.forEach(clearTimeout);
+  },[]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"#0c0c0e",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:999,opacity:fading?0:1,transition:"opacity 0.4s ease",userSelect:"none"}}>
+      <div style={{display:"flex",alignItems:"flex-end",marginBottom:28,minHeight:"clamp(80px,20vw,130px)"}}>
+        <span style={{fontSize:"clamp(80px,20vw,128px)",fontWeight:800,fontFamily:"'Geist',sans-serif",letterSpacing:"0.04em",color:"#f2f2f7",lineHeight:1}}>{typed}</span>
+        <span style={{display:"inline-block",width:"clamp(4px,1vw,6px)",height:"clamp(56px,14vw,90px)",background:"#3a8ef6",marginLeft:6,marginBottom:4,borderRadius:2,opacity:showCursor?1:0,animation:showCursor?"cursorBlink 0.6s step-end infinite":"none",transition:"opacity 0.2s ease",flexShrink:0}}/>
+      </div>
+      <div style={{width:showSub?52:0,height:"1px",background:"linear-gradient(90deg,transparent,rgba(58,142,246,0.7),transparent)",transition:"width 0.5s cubic-bezier(.32,.72,0,1)",marginBottom:16}}/>
+      <div style={{fontSize:11,fontFamily:"'Geist Mono',monospace",letterSpacing:"0.32em",textTransform:"uppercase",color:"#6e6e73",opacity:showSub?1:0,transition:"opacity 0.5s ease 0.15s"}}>{studioName||"Frame OS"}</div>
+      <style>{`@keyframes cursorBlink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
+    </div>
+  );
+}
+
+/* ── LOCK SCREEN ── */
+function LockScreen({onUnlock,studioName}){
+  const[pass,setPass]=useState("");const[err,setErr]=useState(false);const[shake,setShake]=useState(false);const ref=useRef();
+  useEffect(()=>{setTimeout(()=>ref.current?.focus(),100);},[]);
+  const attempt=()=>{const role=onUnlock(pass);if(role){setErr(false);}else{setErr(true);setShake(true);setPass("");setTimeout(()=>setShake(false),600);}};
+  return(
+    <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:360,animation:"fadeUp .4s ease"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{width:60,height:60,borderRadius:16,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 16px"}}>🎞</div>
+          <div style={{fontSize:22,fontWeight:700,color:"var(--text)",marginBottom:6}}>{studioName||"Frame OS"}</div>
+          <div style={{fontSize:13,color:"var(--text2)"}}>Enter your password to continue</div>
+        </div>
+        <div style={{animation:shake?"shake .4s ease":"none"}}>
+          <input ref={ref} type="password" className="input" value={pass} onChange={e=>{setPass(e.target.value);setErr(false);}} onKeyDown={e=>{if(e.key==="Enter")attempt();}} placeholder="Password" style={{textAlign:"center",fontSize:18,letterSpacing:"0.2em",marginBottom:12}}/>
+          {err&&<div style={{fontSize:12,color:"var(--red)",textAlign:"center",marginBottom:10}}>Incorrect password. Try again.</div>}
+          <button className="btn-p" style={{width:"100%",padding:"11px",fontSize:15}} onClick={attempt}>Unlock</button>
+        </div>
+        <div style={{marginTop:20,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px"}}>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Access levels</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--accent)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Admin</b> full access</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--green)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Viewer</b> read-only</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── CHANGE PASS MODAL ── */
+function ChangePassModal({onClose,onSave,viewerPassword,onSaveViewer}){
+  const[tab,setTab]=useState("admin");
+  const[cur,setCur]=useState("");const[next,setNext]=useState("");const[conf,setConf]=useState("");const[err,setErr]=useState("");
+  const[vcur,setVcur]=useState("");const[vnext,setVnext]=useState("");const[vconf,setVconf]=useState("");const[verr,setVerr]=useState("");
+  const saveA=()=>{if(!cur||!next){setErr("Fill all fields.");return;}if(next!==conf){setErr("Passwords do not match.");return;}if(next.length<4){setErr("Min 4 characters.");return;}onSave(cur,next);setErr("");};
+  const saveV=()=>{if(!vcur||!vnext){setVerr("Fill all fields.");return;}if(vnext!==vconf){setVerr("Passwords do not match.");return;}if(vnext.length<4){setVerr("Min 4 characters.");return;}onSaveViewer(vcur,vnext);setVerr("");};
+  return(<Modal title="Manage passwords" onClose={onClose} width={440}>
+    <div style={{display:"flex",gap:4,marginBottom:18}}>{[["admin","🔒 Admin"],["viewer","👁 Viewer"]].map(([id,label])=><button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"7px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"'Geist',sans-serif",background:tab===id?"var(--accent)":"var(--bg4)",color:tab===id?"#fff":"var(--text2)",border:`1px solid ${tab===id?"var(--accent)":"var(--border)"}`}}>{label}</button>)}</div>
+    {tab==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Admin password — full edit access.</div><div><Lbl ch="Current admin password"/><Inp type="password" value={cur} onChange={setCur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={next} onChange={setNext} placeholder="••••••••"/></div><div><Lbl ch="Confirm"/><Inp type="password" value={conf} onChange={setConf} placeholder="••••••••"/></div>{err&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",borderRadius:8,padding:"8px 12px"}}>{err}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveA}>Update admin</button></div></div>}
+    {tab==="viewer"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--green-bg)",border:"1px solid rgba(48,209,88,.2)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Viewer password — read-only access.</div><div><Lbl ch="Current viewer password"/><Inp type="password" value={vcur} onChange={setVcur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={vnext} onChange={setVnext} placeholder="••••••••"/></div><div><Lbl ch="Confirm"/><Inp type="password" value={vconf} onChange={setVconf} placeholder="••••••••"/></div>{verr&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",borderRadius:8,padding:"8px 12px"}}>{verr}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveV}>Update viewer</button></div></div>}
+  </Modal>);
 }
 
 /* ── ROOT APP ── */
 export default function App(){
   const[role,setRole]=useState(()=>sessionStorage.getItem("frameOS_role")||null);
   const[splash,setSplash]=useState(()=>!sessionStorage.getItem("frameOS_splashDone"));
-  const[theme,setTheme]=usePersist("frameOS_theme","dark");
-  useEffect(()=>{document.body.classList.toggle("light",theme==="light");},[theme]);
-  const toggleTheme=()=>setTheme(t=>t==="dark"?"light":"dark");
   const[password,setPassword]=usePersist("frameOS_password","frame2026");
   const[viewerPw,setViewerPw]=usePersist("frameOS_viewerPw","view2026");
   const[studioName,setStudioName]=usePersist("frameOS_studioName","Frame OS");
   const[expUrl,setExpUrl]=usePersist("frameOS_expUrl","");
+  const[theme,setTheme]=usePersist("frameOS_theme","dark");
+  useEffect(()=>{document.body.classList.toggle("light",theme==="light");},[theme]);
+  const toggleTheme=()=>setTheme(t=>t==="dark"?"light":"dark");
   const[tab,setTab]=useState("projects");
   const[collapsed,setCollapsed]=useState(false);
-  const[synced,setSynced]=useState(false);
   const[showChgPw,setShowChgPw]=useState(false);
   const[showExpUrl,setShowExpUrl]=useState(false);
-  const[allCrew,setAllCrew]=usePersist("frameOS_crew",SEED_CREW);
-  const projects=LS.get("frameOS_projects",SEED_PROJECTS);
+  const[allCrew,setAllCrew,loadingCrew]=useDB("crew",mpC);
   const isAdmin=role==="admin";const isViewer=role==="viewer";
   const NAV=isAdmin?NAV_A:NAV_V;
   const tryUnlock=pw=>{if(pw===password){sessionStorage.setItem("frameOS_role","admin");setRole("admin");return "admin";}if(pw===viewerPw){sessionStorage.setItem("frameOS_role","viewer");setRole("viewer");return "viewer";}return null;};
@@ -1065,14 +1026,15 @@ export default function App(){
   const safeTab=isViewer&&!NAV_V.find(n=>n.id===tab)?"projects":tab;
   const sideW=collapsed?60:220;
   const pageTitle=NAV.find(n=>n.id===safeTab)?.label??"";
-  if(splash)return <><style>{FONTS}{GS}</style><SplashScreen onDone={()=>{sessionStorage.setItem("frameOS_splashDone","1");setSplash(false);}} studioName={studioName}></SplashScreen></>
+  if(splash)return <><style>{FONTS}{GS}</style><SplashScreen onDone={()=>{sessionStorage.setItem("frameOS_splashDone","1");setSplash(false);}} studioName={studioName}/></>;
   if(!role)return <><style>{FONTS}{GS}</style><LockScreen onUnlock={tryUnlock} studioName={studioName}/></>;
+  if(loadingCrew)return <><style>{FONTS}{GS}</style><LoadingScreen msg="Syncing team data…"/></>;
   return(<>
     <style>{FONTS}{GS}</style>
     <div style={{display:"flex",minHeight:"100vh",background:"var(--bg)"}}>
       <Sidebar tab={safeTab} setTab={setTab} collapsed={collapsed} setCollapsed={setCollapsed} studioName={studioName} setStudioName={setStudioName} role={role}/>
       <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
-        <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"var(--header-glass)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
+        <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(14,14,16,0.9)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
           <style>{`#hdr{padding:0 28px;}`}</style>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{pageTitle}</span>
@@ -1082,17 +1044,17 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.25)",borderRadius:9,cursor:"pointer",fontSize:17,textDecoration:"none",flexShrink:0}}>💲</a>}
             {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>💲</button>}
-            {isAdmin&&<button onClick={()=>setShowChgPw(true)} title="Passwords" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>🔒</button>}
             <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>{theme==="dark"?"☀️":"🌙"}</button>
+            {isAdmin&&<button onClick={()=>setShowChgPw(true)} title="Passwords" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>🔒</button>}
             <button onClick={()=>{sessionStorage.removeItem("frameOS_role");setRole(null);}} title="Lock" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>↩</button>
           </div>
         </header>
         <main style={{flex:1,padding:"26px 28px"}}>
-          {safeTab==="projects"&&<ProjectsView invoices={LS.get("frameOS_invoices",SEED_INV)} allCrew={allCrew} setAllCrew={setAllCrew} role={role} expTrackerUrl={expUrl}/>}
+          {safeTab==="projects"&&<ProjectsView allCrew={allCrew} setAllCrew={setAllCrew} role={role} expTrackerUrl={expUrl}/>}
           {safeTab==="finance"&&isAdmin&&<FinanceView/>}
           {safeTab==="clients"&&<ClientsView role={role}/>}
-          {safeTab==="crew"&&<CrewView allCrew={allCrew} setAllCrew={setAllCrew} projects={projects} role={role}/>}
-          {safeTab==="quotes"&&isAdmin&&<QuotesView projects={projects}/>}
+          {safeTab==="crew"&&<CrewView allCrew={allCrew} setAllCrew={setAllCrew} projects={[]} role={role}/>}
+          {safeTab==="quotes"&&isAdmin&&<QuotesView projects={[]}/>}
           {safeTab==="about"&&<AboutView role={role}/>}
         </main>
         {/* Mobile bottom nav */}
@@ -1102,7 +1064,7 @@ export default function App(){
           </button>)}
         </nav>
         <footer style={{borderTop:"1px solid var(--border)",padding:"12px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.1 · {isAdmin?"Data saved locally":"View only"}</span>
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.1 · {isAdmin?"Synced with Supabase":"View only"}</span>
           {isAdmin&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Default: frame2026 / view2026</span>}
         </footer>
       </div>
