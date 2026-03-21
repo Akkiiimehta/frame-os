@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const FONTS = `@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');`;
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');`;
 
 const LS={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
 function usePersist(key,init){const[val,setVal]=useState(()=>LS.get(key,typeof init==="function"?init():init));const set=useCallback((v)=>{const n=typeof v==="function"?v(val):v;LS.set(key,n);setVal(n);},[key]);return[val,set];}
@@ -19,8 +19,31 @@ const GS=`
   --teal:#5ac8fa;--teal-bg:rgba(90,200,250,0.1);
   --orange:#ff9f0a;--orange-bg:rgba(255,159,10,0.1);
   --radius:12px;--header-h:52px;--bottom-h:62px;
+  --panel-bg:#14141a;--header-glass:rgba(14,14,16,0.9);--modal-bg:#1a1a1e;--sidebar-bg:rgba(14,14,16,0.96);
 }
-html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+/* ── LIGHT THEME (warm cream) ── */
+body.light{
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeece8;--bg4:#e5e2dc;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5a5a5a;--text3:#a0a0a0;
+  --accent:#1a56db;--accent-bg:rgba(26,86,219,0.08);--accent-bd:rgba(26,86,219,0.2);
+  --green:#0d7a4e;--green-bg:rgba(13,122,78,0.08);
+  --amber:#b45309;--amber-bg:rgba(180,83,9,0.08);
+  --red:#c0392b;--red-bg:rgba(192,57,43,0.08);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,0.08);
+  --teal:#0891b2;--teal-bg:rgba(8,145,178,0.08);
+  --orange:#c2410c;--orange-bg:rgba(194,65,12,0.08);
+  --panel-bg:#faf9f6;--header-glass:rgba(245,244,240,0.92);--modal-bg:#ffffff;--sidebar-bg:rgba(245,244,240,0.97);
+}
+body.light ::-webkit-scrollbar-thumb{background:var(--bg4);}
+body.light .card.clickable:hover{box-shadow:0 8px 32px rgba(0,0,0,.12);}
+body.light .panel,.light .cs-panel{background:var(--panel-bg);}
+body.light .mbox{background:var(--modal-bg);}
+body.light .ovl{background:rgba(0,0,0,.35);}
+body.light .povl{background:rgba(0,0,0,.2);}
+body.light .row-h:hover{background:rgba(0,0,0,.025);}
+body.light input[type=date].input{color-scheme:light;}
+html,body{background:var(--bg);color:var(--text);font-family:'Geist',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -32,31 +55,31 @@ html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-seri
 .card.clickable{cursor:pointer;}.card.clickable:hover{border-color:var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.45);transform:translateY(-2px);}
 .nav-s{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--text2);border:none;background:none;width:100%;text-align:left;}
 .nav-s:hover{background:var(--bg4);color:var(--text);}.nav-s.active{background:var(--bg4);color:var(--text);}
-.input{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s;}
+.input{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Geist',sans-serif;font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s;}
 .input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(58,142,246,.12);}.input::placeholder{color:var(--text3);}
 select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.input{resize:vertical;min-height:72px;line-height:1.6;}
-.btn-p{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 18px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,transform .15s;white-space:nowrap;}
+.btn-p{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 18px;font-family:'Geist',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,transform .15s;white-space:nowrap;}
 .btn-p:hover{filter:brightness(1.1);}.btn-p:active{transform:scale(.98);}
-.btn-g{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:9px;padding:7px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+.btn-g{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:9px;padding:7px 16px;font-family:'Geist',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
 .btn-g:hover{background:var(--bg3);color:var(--text);}
-.btn-sm{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn-sm{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;font-family:'Geist',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .btn-sm:hover{border-color:var(--green);color:var(--green);background:var(--green-bg);}
-.fpill{border-radius:20px;padding:4px 14px;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap;}
+.fpill{border-radius:20px;padding:4px 14px;font-size:12px;font-family:'Geist Mono',monospace;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap;}
 .fpill.active{background:var(--bg4);color:var(--text);border-color:var(--border2);}.fpill:hover:not(.active){background:var(--bg3);}
 .row-h{transition:background .12s;}.row-h:hover{background:rgba(255,255,255,.025);}
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .18s ease;}
-.mbox{background:#1a1a1e;border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:scaleIn .22s cubic-bezier(.32,.72,0,1);}
-.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
+.mbox{background:var(--modal-bg);border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:scaleIn .22s cubic-bezier(.32,.72,0,1);}
+.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border2);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
 .povl{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:150;animation:fadeIn .2s ease;}
-.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
+.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border2);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
 .cs-ovl{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);z-index:168;animation:fadeIn .2s ease;}
 .ps{padding:20px 26px;border-bottom:1px solid var(--border);}.ps:last-child{border-bottom:none;}
 .drow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}.drow:last-child{border-bottom:none;}
-.tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'DM Mono',monospace;background:var(--bg4);color:var(--text2);border-radius:6px;padding:2px 8px;border:1px solid var(--border);}
+.tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'Geist Mono',monospace;background:var(--bg4);color:var(--text2);border-radius:6px;padding:2px 8px;border:1px solid var(--border);}
 .tchip .del{cursor:pointer;font-size:10px;color:var(--text3);transition:color .12s;}.tchip .del:hover{color:var(--red);}
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(10,10,14,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--header-glass);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
 .bni{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;height:100%;border:none;background:none;cursor:pointer;padding:6px 2px;}
-.bni-ic{font-size:20px;line-height:1;}.bni-lb{font-size:9px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.03em;text-transform:uppercase;}
+.bni-ic{font-size:20px;line-height:1;}.bni-lb{font-size:9px;font-family:'Geist Mono',monospace;color:var(--text3);letter-spacing:0.03em;text-transform:uppercase;}
 .bni.active .bni-lb{color:var(--accent);}
 @media(max-width:768px){
   .sd{display:none!important;}.bnav{display:flex;}
@@ -90,21 +113,21 @@ const totalRec=inv=>(inv.payments||[]).reduce((s,p)=>s+p.amount,0);
 const autoSt=inv=>{const r=totalRec(inv);if(r===0)return inv.status==="Overdue"?"Overdue":"Pending";if(r>=inv.amount)return "Paid";return "Partial";};
 const rc=role=>{const m={Director:"var(--purple)",DOP:"var(--teal)",Producer:"var(--accent)",AD:"var(--amber)","Line Producer":"var(--orange)",AC:"var(--green)",Gaffer:"var(--amber)",Editor:"var(--red)",Sound:"var(--green)"};return m[role]||"var(--text2)";};
 
-function Badge({status}){const s=SC[status]||{dot:"var(--text3)",bg:"var(--bg4)",bd:"var(--border)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontFamily:"'DM Mono',monospace",color:s.dot,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:20,padding:"2px 9px",whiteSpace:"nowrap"}}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block",flexShrink:0}}/>{status}</span>;}
-function RBadge({role}){const c=rc(role);return <span style={{fontSize:11,fontFamily:"'DM Mono',monospace",color:c,background:c+"22",border:`1px solid ${c}44`,borderRadius:20,padding:"2px 10px",whiteSpace:"nowrap"}}>{role}</span>;}
+function Badge({status}){const s=SC[status]||{dot:"var(--text3)",bg:"var(--bg4)",bd:"var(--border)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontFamily:"'Geist Mono',monospace",color:s.dot,background:s.bg,border:`1px solid ${s.bd}`,borderRadius:20,padding:"2px 9px",whiteSpace:"nowrap"}}><span style={{width:5,height:5,borderRadius:"50%",background:s.dot,display:"inline-block",flexShrink:0}}/>{status}</span>;}
+function RBadge({role}){const c=rc(role);return <span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",color:c,background:c+"22",border:`1px solid ${c}44`,borderRadius:20,padding:"2px 10px",whiteSpace:"nowrap"}}>{role}</span>;}
 function Lbl({ch}){return <div style={{fontSize:12,color:"var(--text2)",marginBottom:6,fontWeight:500}}>{ch}</div>;}
 function Inp({value,onChange,placeholder,type="text",style={}}){return <input className="input" type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={style}/>;}
 function TA({value,onChange,placeholder}){return <textarea className="input" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>;}
 function Sel({value,onChange,options}){return <select className="input" value={value} onChange={e=>onChange(e.target.value)}>{options.map(o=><option key={o}>{o}</option>)}</select>;}
 function Modal({title,onClose,children,width=480}){return <div className="ovl" onClick={onClose}><div className="mbox" style={{width}} onClick={e=>e.stopPropagation()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}><span style={{fontSize:17,fontWeight:600,color:"var(--text)"}}>{title}</span><button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>{children}</div></div>;}
-function SC2({label,value,sub,color,icon,delay=0}){return <div className="card fade-up" style={{padding:"20px",animationDelay:`${delay}ms`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:10}}>{label}</div><div style={{fontSize:26,fontWeight:600,color,lineHeight:1}}>{value}</div>{sub&&<div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>{sub}</div>}</div><span style={{fontSize:20,opacity:.35,marginTop:2}}>{icon}</span></div></div>;}
+function SC2({label,value,sub,color,icon,delay=0}){return <div className="card fade-up" style={{padding:"20px",animationDelay:`${delay}ms`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:10}}>{label}</div><div style={{fontSize:26,fontWeight:600,color,lineHeight:1}}>{value}</div>{sub&&<div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>{sub}</div>}</div><span style={{fontSize:20,opacity:.35,marginTop:2}}>{icon}</span></div></div>;}
 function Av({name,idx,size=26}){return <div title={name} style={{width:size,height:size,borderRadius:"50%",background:AVC[idx%AVC.length],border:"2px solid var(--bg2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:size>30?13:10,fontWeight:700,color:"#fff",flexShrink:0}}>{(name||"?")[0].toUpperCase()}</div>;}
 
-function ETags({tags,onAdd,onDelete}){const[adding,setAdding]=useState(false);const[val,setVal]=useState("");const ref=useRef();useEffect(()=>{if(adding&&ref.current)ref.current.focus();},[adding]);const commit=()=>{const t=val.trim();if(t&&!tags.includes(t))onAdd(t);setVal("");setAdding(false);};return <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>{tags.map(t=><span key={t} className="tchip">{t}<span className="del" onClick={()=>onDelete(t)}>✕</span></span>)}{adding?<input ref={ref} value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){setAdding(false);setVal("");}}} placeholder="tag…" style={{background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:6,color:"var(--text)",fontFamily:"'DM Mono',monospace",fontSize:11,padding:"2px 8px",outline:"none",width:80}}/>:<button onClick={()=>setAdding(true)} style={{fontSize:11,fontFamily:"'DM Mono',monospace",background:"transparent",border:"1px dashed var(--border2)",color:"var(--text3)",borderRadius:6,padding:"2px 8px",cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--accent)";e.currentTarget.style.color="var(--accent)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text3)";}}>+ tag</button>}</div>;}
+function ETags({tags,onAdd,onDelete}){const[adding,setAdding]=useState(false);const[val,setVal]=useState("");const ref=useRef();useEffect(()=>{if(adding&&ref.current)ref.current.focus();},[adding]);const commit=()=>{const t=val.trim();if(t&&!tags.includes(t))onAdd(t);setVal("");setAdding(false);};return <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>{tags.map(t=><span key={t} className="tchip">{t}<span className="del" onClick={()=>onDelete(t)}>✕</span></span>)}{adding?<input ref={ref} value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){setAdding(false);setVal("");}}} placeholder="tag…" style={{background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:6,color:"var(--text)",fontFamily:"'Geist Mono',monospace",fontSize:11,padding:"2px 8px",outline:"none",width:80}}/>:<button onClick={()=>setAdding(true)} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"transparent",border:"1px dashed var(--border2)",color:"var(--text3)",borderRadius:6,padding:"2px 8px",cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--accent)";e.currentTarget.style.color="var(--accent)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text3)";}}>+ tag</button>}</div>;}
 
 function ENotes({notes,onSave}){const[editing,setEditing]=useState(false);const[draft,setDraft]=useState(notes||"");if(editing)return <div><TA value={draft} onChange={setDraft} placeholder="Add notes…"/><div style={{display:"flex",gap:8,marginTop:8}}><button className="btn-p" style={{padding:"5px 14px",fontSize:12}} onClick={()=>{onSave(draft);setEditing(false);}}>Save</button><button className="btn-g" style={{padding:"5px 12px",fontSize:12}} onClick={()=>{setDraft(notes||"");setEditing(false);}}>Cancel</button></div></div>;return <div style={{position:"relative",cursor:"pointer"}} onClick={()=>{setDraft(notes||"");setEditing(true);}}>{notes?<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:"12px 36px 12px 14px"}}>{notes}</div>:<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic",background:"var(--bg3)",border:"1px dashed var(--border2)",borderRadius:9,padding:"12px 14px"}}>Click to add notes…</div>}<span style={{position:"absolute",top:10,right:12,fontSize:11,color:"var(--text3)"}}>✎</span></div>;}
 
-function ACell({value,onChange}){const[editing,setEditing]=useState(false);const[draft,setDraft]=useState(String(value));const ref=useRef();useEffect(()=>{if(editing&&ref.current)ref.current.focus();},[editing]);const commit=()=>{const n=Number(draft.replace(/[^0-9.]/g,""));if(!isNaN(n)&&n>0)onChange(n);setEditing(false);};if(editing)return <div style={{padding:"6px 16px"}}><div style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:7,padding:"4px 8px",width:"fit-content"}}><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>₹</span><input ref={ref} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape")setEditing(false);}} style={{background:"transparent",border:"none",outline:"none",color:"var(--text)",fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:600,width:90}}/></div></div>;return <div onClick={()=>{setDraft(String(value));setEditing(true);}} style={{padding:"13px 16px",fontSize:14,fontWeight:600,fontFamily:"'DM Mono',monospace",color:"var(--text)",cursor:"text",display:"flex",alignItems:"center",gap:5}}>{fmt(value)}<span style={{fontSize:10,color:"var(--text3)",opacity:.6}}>✎</span></div>;}
+function ACell({value,onChange}){const[editing,setEditing]=useState(false);const[draft,setDraft]=useState(String(value));const ref=useRef();useEffect(()=>{if(editing&&ref.current)ref.current.focus();},[editing]);const commit=()=>{const n=Number(draft.replace(/[^0-9.]/g,""));if(!isNaN(n)&&n>0)onChange(n);setEditing(false);};if(editing)return <div style={{padding:"6px 16px"}}><div style={{display:"flex",alignItems:"center",gap:4,background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:7,padding:"4px 8px",width:"fit-content"}}><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>₹</span><input ref={ref} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape")setEditing(false);}} style={{background:"transparent",border:"none",outline:"none",color:"var(--text)",fontFamily:"'Geist Mono',monospace",fontSize:14,fontWeight:600,width:90}}/></div></div>;return <div onClick={()=>{setDraft(String(value));setEditing(true);}} style={{padding:"13px 16px",fontSize:14,fontWeight:600,fontFamily:"'Geist Mono',monospace",color:"var(--text)",cursor:"text",display:"flex",alignItems:"center",gap:5}}>{fmt(value)}<span style={{fontSize:10,color:"var(--text3)",opacity:.6}}>✎</span></div>;}
 
 function StCell({status,onChange}){
   const[open,setOpen]=useState(false);
@@ -119,10 +142,10 @@ function StCell({status,onChange}){
     <div ref={trigRef} onClick={handleOpen} style={{display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer"}}>
       <Badge status={status}/><span style={{fontSize:10,color:"var(--text3)"}}>▾</span>
     </div>
-    {open&&<div ref={ref} style={{position:"fixed",top:pos.top,left:pos.left,zIndex:300,background:"#1e1e24",border:"1px solid var(--border2)",borderRadius:10,padding:6,minWidth:140,boxShadow:"0 12px 36px rgba(0,0,0,.7)"}}>
+    {open&&<div ref={ref} style={{position:"fixed",top:pos.top,left:pos.left,zIndex:300,background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:6,minWidth:140,boxShadow:"0 12px 36px rgba(0,0,0,.3)"}}>
       {INV_ST.map(st=>{const ss=SC[st];const act=status===st;return <div key={st} onClick={()=>{onChange(st);setOpen(false);}} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:7,cursor:"pointer",background:act?"var(--bg4)":"transparent",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg4)"} onMouseLeave={e=>e.currentTarget.style.background=act?"var(--bg4)":"transparent"}>
         <span style={{width:7,height:7,borderRadius:"50%",background:ss.dot,display:"inline-block",flexShrink:0}}/>
-        <span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:act?ss.dot:"var(--text2)",fontWeight:act?500:400}}>{st}</span>
+        <span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:act?ss.dot:"var(--text2)",fontWeight:act?500:400}}>{st}</span>
         {act&&<span style={{marginLeft:"auto",fontSize:11,color:ss.dot}}>✓</span>}
       </div>;})}
     </div>}
@@ -200,12 +223,12 @@ function CSPanel({project,allCrew,onClose}){
   const tabs=["info","crew","cast","schedule","requirements"];
   const crew=allCrew.filter(c=>(project.crewIds||[]).includes(c.id));
   return(<><div className="cs-ovl" onClick={onClose}/><div className="cs-panel">
-    <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+    <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
         <div><div style={{fontSize:17,fontWeight:700,color:"var(--text)"}}>Call Sheet Generator</div><div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{cs.projectTitle}</div></div>
         <div style={{display:"flex",gap:8}}><button className="btn-p" onClick={dl}>↓ Download</button><button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>
       </div>
-      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{tabs.map(t=><button key={t} onClick={()=>setTab(t)} style={{fontSize:11,fontFamily:"'DM Mono',monospace",padding:"4px 12px",borderRadius:20,cursor:"pointer",background:tab===t?"var(--accent)":"transparent",color:tab===t?"#fff":"var(--text2)",border:`1px solid ${tab===t?"var(--accent)":"var(--border)"}`,textTransform:"capitalize"}}>{t}</button>)}</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{tabs.map(t=><button key={t} onClick={()=>setTab(t)} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",padding:"4px 12px",borderRadius:20,cursor:"pointer",background:tab===t?"var(--accent)":"transparent",color:tab===t?"#fff":"var(--text2)",border:`1px solid ${tab===t?"var(--accent)":"var(--border)"}`,textTransform:"capitalize"}}>{t}</button>)}</div>
     </div>
     {tab==="info"&&<div className="ps"><div style={{display:"flex",flexDirection:"column",gap:12}}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><Lbl ch="Production house"/><Inp value={cs.productionHouse} onChange={v=>upd("productionHouse",v)} placeholder="Frame OS Productions"/></div><div><Lbl ch="Shoot date"/><Inp type="date" value={cs.shootDate} onChange={v=>upd("shootDate",v)}/></div></div>
@@ -220,7 +243,7 @@ function CSPanel({project,allCrew,onClose}){
     {tab==="crew"&&<div className="ps">
       <div style={{fontSize:12,color:"var(--text3)",marginBottom:14}}>Auto-filled from project crew. Edit call times below.</div>
       {crew.map((c,i)=><div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid var(--border)"}}><Av name={c.name} idx={i} size={28}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{c.name}</div><div style={{fontSize:11,color:"var(--text3)"}}>{c.role}{c.phone&&` · ${c.phone}`}</div></div><RBadge role={c.role}/></div>)}
-      <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",margin:"16px 0 10px"}}>Department call times</div>
+      <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",margin:"16px 0 10px"}}>Department call times</div>
       {cs.deptCalls.map((d,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><Inp value={d.dept} onChange={v=>{const n=[...cs.deptCalls];n[i]={...n[i],dept:v};upd("deptCalls",n);}} placeholder="Department"/><Inp value={d.time} onChange={v=>{const n=[...cs.deptCalls];n[i]={...n[i],time:v};upd("deptCalls",n);}} placeholder="Call time"/></div>)}
       <button className="btn-g" style={{fontSize:12,marginTop:4}} onClick={()=>upd("deptCalls",[...cs.deptCalls,{dept:"",time:""}])}>+ Add department</button>
     </div>}
@@ -254,25 +277,25 @@ function InvPanel({invoice,onClose,onUpdate}){
   const addP=()=>{const a=Number(pf.amount);if(!a||!pf.date)return;const np=[...invoice.payments,{id:Date.now(),amount:a,date:pf.date,note:pf.note}];onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});setPf({amount:"",date:"",note:""});};
   const delP=pid=>{const np=invoice.payments.filter(p=>p.id!==pid);onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});};
   return(<><div className="povl" onClick={onClose}/><div className="panel">
-    <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+    <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-        <div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:5}}>{invoice.invoiceNo}</div><div style={{fontSize:20,fontWeight:700,color:"var(--text)",marginBottom:3}}>{invoice.project}</div><div style={{fontSize:13,color:"var(--text2)"}}>{invoice.client}</div></div>
+        <div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:5}}>{invoice.invoiceNo}</div><div style={{fontSize:20,fontWeight:700,color:"var(--text)",marginBottom:3}}>{invoice.project}</div><div style={{fontSize:13,color:"var(--text2)"}}>{invoice.client}</div></div>
         <button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
       </div>
-      <div style={{display:"flex",gap:10}}><Badge status={invoice.status}/><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Due {invoice.due}</span></div>
+      <div style={{display:"flex",gap:10}}><Badge status={invoice.status}/><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Due {invoice.due}</span></div>
     </div>
     <div className="ps">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:18}}>
-        {[["Total",fmt(invoice.amount),"var(--text)"],["Received",fmt(rec),"var(--green)"],["Outstanding",fmt(Math.max(0,rem)),rem>0?"var(--red)":"var(--text3)"]].map(([l,v,c])=><div key={l} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"13px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:7}}>{l}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'DM Mono',monospace"}}>{v}</div></div>)}
+        {[["Total",fmt(invoice.amount),"var(--text)"],["Received",fmt(rec),"var(--green)"],["Outstanding",fmt(Math.max(0,rem)),rem>0?"var(--red)":"var(--text3)"]].map(([l,v,c])=><div key={l} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"13px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:7}}>{l}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'Geist Mono',monospace"}}>{v}</div></div>)}
       </div>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:"var(--text2)"}}>Payment progress</span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:sc.dot}}>{pct.toFixed(0)}%</span></div>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:"var(--text2)"}}>Payment progress</span><span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:sc.dot}}>{pct.toFixed(0)}%</span></div>
       <div style={{height:6,borderRadius:6,background:"var(--bg4)",overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,var(--green),${pct<100?"var(--amber)":"var(--green)"})`,borderRadius:6,transition:"width .6s ease"}}/></div>
     </div>
     <div className="ps">
-      <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Payment history</div>
-      {invoice.payments.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>No payments yet.</div>:invoice.payments.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"flex-start",gap:12,paddingBottom:i<invoice.payments.length-1?14:0,marginBottom:i<invoice.payments.length-1?14:0,borderBottom:i<invoice.payments.length-1?"1px solid var(--border)":"none"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}><div style={{width:10,height:10,borderRadius:"50%",background:"var(--green)",marginTop:3}}/>{i<invoice.payments.length-1&&<div style={{width:1,flex:1,background:"var(--border)",marginTop:4,minHeight:20}}/>}</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:15,fontWeight:600,color:"var(--green)",fontFamily:"'DM Mono',monospace"}}>{fmt(p.amount)}</span><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{p.date}</span></div>{p.note&&<div style={{fontSize:12,color:"var(--text2)"}}>{p.note}</div>}</div><button onClick={()=>delP(p.id)} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,padding:"2px 4px"}}>✕</button></div>)}
+      <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Payment history</div>
+      {invoice.payments.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>No payments yet.</div>:invoice.payments.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"flex-start",gap:12,paddingBottom:i<invoice.payments.length-1?14:0,marginBottom:i<invoice.payments.length-1?14:0,borderBottom:i<invoice.payments.length-1?"1px solid var(--border)":"none"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}><div style={{width:10,height:10,borderRadius:"50%",background:"var(--green)",marginTop:3}}/>{i<invoice.payments.length-1&&<div style={{width:1,flex:1,background:"var(--border)",marginTop:4,minHeight:20}}/>}</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:15,fontWeight:600,color:"var(--green)",fontFamily:"'Geist Mono',monospace"}}>{fmt(p.amount)}</span><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{p.date}</span></div>{p.note&&<div style={{fontSize:12,color:"var(--text2)"}}>{p.note}</div>}</div><button onClick={()=>delP(p.id)} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,padding:"2px 4px"}}>✕</button></div>)}
     </div>
-    {rem>0?<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Log a payment</div><div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><Lbl ch="Amount (₹)"/><Inp value={pf.amount} onChange={v=>setPf(f=>({...f,amount:v}))} placeholder={`Max ${fmt(rem)}`}/></div><div><Lbl ch="Date"/><Inp type="date" value={pf.date} onChange={v=>setPf(f=>({...f,date:v}))}/></div></div><div><Lbl ch="Note"/><Inp value={pf.note} onChange={v=>setPf(f=>({...f,note:v}))} placeholder="e.g. 50% advance"/></div><button className="btn-p" style={{alignSelf:"flex-start"}} onClick={addP}>Add payment</button></div></div>:<div className="ps"><div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"var(--green)"}}><span>✓</span>Fully paid.</div></div>}
+    {rem>0?<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Log a payment</div><div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><Lbl ch="Amount (₹)"/><Inp value={pf.amount} onChange={v=>setPf(f=>({...f,amount:v}))} placeholder={`Max ${fmt(rem)}`}/></div><div><Lbl ch="Date"/><Inp type="date" value={pf.date} onChange={v=>setPf(f=>({...f,date:v}))}/></div></div><div><Lbl ch="Note"/><Inp value={pf.note} onChange={v=>setPf(f=>({...f,note:v}))} placeholder="e.g. 50% advance"/></div><button className="btn-p" style={{alignSelf:"flex-start"}} onClick={addP}>Add payment</button></div></div>:<div className="ps"><div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"var(--green)"}}><span>✓</span>Fully paid.</div></div>}
   </div></>);
 }
 
@@ -291,7 +314,7 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
     {showCS&&<CSPanel project={project} allCrew={allCrew} onClose={()=>setShowCS(false)}/>}
     <div className="povl" onClick={onClose}/>
     <div className="panel" style={{width:490}}>
-      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div style={{flex:1,minWidth:0,marginRight:12}}><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:3}}>{project.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{project.client}</div></div>
           <div style={{display:"flex",gap:8}}>
@@ -299,26 +322,26 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
             <button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           </div>
         </div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Badge status={project.status}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{project.type}</span>{project.location&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>📍 {project.location}</span>}</div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Badge status={project.status}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{project.type}</span>{project.location&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>📍 {project.location}</span>}</div>
       </div>
       <div className="ps">
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>Production progress</span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:sc2.dot}}>{prog}%</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>Production progress</span><span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:sc2.dot}}>{prog}%</span></div>
         <div style={{height:4,borderRadius:4,background:"var(--bg4)",overflow:"hidden",marginBottom:10}}><div style={{height:"100%",width:`${prog}%`,background:sc2.dot,borderRadius:4,transition:"width .6s ease"}}/></div>
-        <div style={{display:"flex",justifyContent:"space-between"}}>{["Pre-Prod","Shoot","Post","Delivered"].map((s,i)=>{const done=prog>=[15,45,75,100][i];return <div key={s} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:"50%",background:done?sc2.dot:"var(--bg4)",border:`1px solid ${done?sc2.dot:"var(--border2)"}`}}/><span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:done?"var(--text2)":"var(--text3)"}}>{s}</span></div>;})}
+        <div style={{display:"flex",justifyContent:"space-between"}}>{["Pre-Prod","Shoot","Post","Delivered"].map((s,i)=>{const done=prog>=[15,45,75,100][i];return <div key={s} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:"50%",background:done?sc2.dot:"var(--bg4)",border:`1px solid ${done?sc2.dot:"var(--border2)"}`}}/><span style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:done?"var(--text2)":"var(--text3)"}}>{s}</span></div>;})}
         </div>
       </div>
       <div className="ps">
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Details</div>
-        {[["Shoot date",project.shoot||"TBD"],["Budget",isAdmin?fmt(project.budget):"Hidden"],["Type",project.type]].map(([k,v])=><div key={k} className="drow"><span style={{fontSize:13,color:"var(--text2)"}}>{k}</span><span style={{fontSize:13,fontWeight:500,color:"var(--text)",fontFamily:k==="Budget"?"'DM Mono',monospace":"inherit"}}>{v}</span></div>)}
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Details</div>
+        {[["Shoot date",project.shoot||"TBD"],["Budget",isAdmin?fmt(project.budget):"Hidden"],["Type",project.type]].map(([k,v])=><div key={k} className="drow"><span style={{fontSize:13,color:"var(--text2)"}}>{k}</span><span style={{fontSize:13,fontWeight:500,color:"var(--text)",fontFamily:k==="Budget"?"'Geist Mono',monospace":"inherit"}}>{v}</span></div>)}
         <div style={{paddingTop:10}}><Lbl ch="Location"/>{isAdmin?<Inp value={project.location||""} onChange={v=>onUpdate(project.id,{location:v})} placeholder="Shoot location"/>:<div style={{fontSize:13,color:"var(--text2)",paddingTop:2}}>{project.location||"—"}</div>}</div>
       </div>
       {/* Expense tracker linkage */}
       {isAdmin&&<div className="ps">
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Expenses</div>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Expenses</div>
         {matchedExp&&expSpent!==null?(<div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:4}}>MATCHED EVENT: {matchedExp.title}</div><div style={{fontSize:16,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"var(--red)"}}>{fmt(expSpent)} spent</div></div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:4}}>OF BUDGET</div><div style={{fontSize:16,fontWeight:700,fontFamily:"'DM Mono',monospace",color:"var(--text)"}}>{fmt(project.budget)}</div></div>
+            <div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:4}}>MATCHED EVENT: {matchedExp.title}</div><div style={{fontSize:16,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:"var(--red)"}}>{fmt(expSpent)} spent</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:4}}>OF BUDGET</div><div style={{fontSize:16,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:"var(--text)"}}>{fmt(project.budget)}</div></div>
           </div>
           <div style={{height:5,borderRadius:5,background:"var(--bg4)",overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${Math.min(100,project.budget>0?(expSpent/project.budget)*100:0)}%`,background:expSpent>project.budget?"var(--red)":"var(--amber)",borderRadius:5,transition:"width .5s"}}/></div>
           <div style={{fontSize:12,color:remaining=>remaining<0?"var(--red)":"var(--green)"}}>{fmt(project.budget-expSpent)} remaining · {((expSpent/project.budget)*100).toFixed(0)}% of budget used</div>
@@ -326,17 +349,17 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
         </div>):(<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic",marginBottom:12}}>No matched expense event found for "{project.client}".</div>)}
         {expTrackerUrl&&<a href={expTrackerUrl} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:7,fontSize:13,color:"var(--accent)",textDecoration:"none",fontWeight:500,background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:9,padding:"8px 14px"}}>💰 Open Expense Tracker</a>}
       </div>}
-      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Update status</div><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{PROJ_ST.map(s=>{const act=project.status===s;const ss=SC[s];return <button key={s} onClick={()=>onStatusChange(project.id,s)} style={{fontSize:12,fontFamily:"'DM Mono',monospace",padding:"5px 12px",borderRadius:20,cursor:"pointer",transition:"all .15s",background:act?ss.bg:"transparent",color:act?ss.dot:"var(--text2)",border:`1px solid ${act?ss.bd:"var(--border)"}`,fontWeight:act?500:400}}>{s}</button>;})}</div></div>}
-      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Tags</div>{isAdmin?<ETags tags={project.tags||[]} onAdd={t=>onUpdate(project.id,{tags:[...(project.tags||[]),t]})} onDelete={t=>onUpdate(project.id,{tags:(project.tags||[]).filter(x=>x!==t)})}/>:<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{(project.tags||[]).map(t=><span key={t} className="tchip">{t}</span>)}</div>}</div>
-      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Notes</div>{isAdmin?<ENotes notes={project.notes} onSave={v=>onUpdate(project.id,{notes:v})}/>:<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{project.notes||<span style={{color:"var(--text3)",fontStyle:"italic"}}>No notes.</span>}</div>}</div>
+      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Update status</div><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{PROJ_ST.map(s=>{const act=project.status===s;const ss=SC[s];return <button key={s} onClick={()=>onStatusChange(project.id,s)} style={{fontSize:12,fontFamily:"'Geist Mono',monospace",padding:"5px 12px",borderRadius:20,cursor:"pointer",transition:"all .15s",background:act?ss.bg:"transparent",color:act?ss.dot:"var(--text2)",border:`1px solid ${act?ss.bd:"var(--border)"}`,fontWeight:act?500:400}}>{s}</button>;})}</div></div>}
+      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Tags</div>{isAdmin?<ETags tags={project.tags||[]} onAdd={t=>onUpdate(project.id,{tags:[...(project.tags||[]),t]})} onDelete={t=>onUpdate(project.id,{tags:(project.tags||[]).filter(x=>x!==t)})}/>:<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{(project.tags||[]).map(t=><span key={t} className="tchip">{t}</span>)}</div>}</div>
+      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Notes</div>{isAdmin?<ENotes notes={project.notes} onSave={v=>onUpdate(project.id,{notes:v})}/>:<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{project.notes||<span style={{color:"var(--text3)",fontStyle:"italic"}}>No notes.</span>}</div>}</div>
       <div className="ps">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase"}}>Crew ({crewOnP.length})</div>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase"}}>Crew ({crewOnP.length})</div>
           {isAdmin&&<CPicker/>}
         </div>
         {crewOnP.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>No crew added yet.</div>:crewOnP.map(c=><div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}><Av name={c.name} idx={allCrew.indexOf(c)} size={34}/><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{c.name}</span><RBadge role={c.role}/></div><div style={{fontSize:12,color:"var(--text3)"}}>{c.phone&&<span>📞 {c.phone}</span>}{c.phone&&c.email&&<span> · </span>}{c.email&&<span>✉ {c.email}</span>}</div>{c.location&&<div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>📍 {c.location}</div>}</div>{isAdmin&&<button onClick={()=>onRemoveCrew(project.id,c.id)} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,padding:"4px",flexShrink:0}}>✕</button>}</div>)}
       </div>
-      {relInv&&isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Linked invoice</div><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text3)"}}>{relInv.invoiceNo}</span><Badge status={relInv.status}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Mono',monospace",color:"var(--text)"}}>{fmt(relInv.amount)}</span><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Due {relInv.due}</span></div>{totalRec(relInv)>0&&<div style={{marginTop:10}}><div style={{height:3,borderRadius:3,background:"var(--bg4)",overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(100,(totalRec(relInv)/relInv.amount)*100)}%`,background:"var(--green)",borderRadius:3}}/></div><div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>{fmt(totalRec(relInv))} of {fmt(relInv.amount)} received</div></div>}</div></div>}
+      {relInv&&isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Linked invoice</div><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text3)"}}>{relInv.invoiceNo}</span><Badge status={relInv.status}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'Geist Mono',monospace",color:"var(--text)"}}>{fmt(relInv.amount)}</span><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Due {relInv.due}</span></div>{totalRec(relInv)>0&&<div style={{marginTop:10}}><div style={{height:3,borderRadius:3,background:"var(--bg4)",overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(100,(totalRec(relInv)/relInv.amount)*100)}%`,background:"var(--green)",borderRadius:3}}/></div><div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>{fmt(totalRec(relInv))} of {fmt(relInv.amount)} received</div></div>}</div></div>}
     </div>
   </>);
 }
@@ -366,7 +389,7 @@ function ProjectsView({invoices,allCrew,setAllCrew,role,expTrackerUrl}){
       {["All",...PROJ_ST].map(s=><button key={s} className={`fpill${filter===s?" active":""}`} onClick={()=>setFilter(s)}>{s}</button>)}
       <div style={{flex:1}}/>{isAdmin&&<button className="btn-p" onClick={()=>setShowAdd(true)}>+ New project</button>}
     </div>
-    <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,fontFamily:"'DM Mono',monospace"}}>↗ tap card to view · {isAdmin&&"📋 call sheet inside panel"}</div>
+    <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,fontFamily:"'Geist Mono',monospace"}}>↗ tap card to view · {isAdmin&&"📋 call sheet inside panel"}</div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {shown.map((p,i)=>{
         const sc2=SC[p.status]||SC["On Hold"];const crew=allCrew.filter(c=>p.crewIds.includes(c.id));
@@ -377,15 +400,15 @@ function ProjectsView({invoices,allCrew,setAllCrew,role,expTrackerUrl}){
             <Badge status={p.status}/>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,paddingBottom:12,borderBottom:"1px solid var(--border)",marginBottom:12}}>
-            {[["TYPE",p.type],["SHOOT",p.shoot||"TBD"]].map(([k,v])=><div key={k}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.06em",marginBottom:3}}>{k}</div><div style={{fontSize:13,color:"var(--text2)"}}>{v}</div></div>)}
-            {isAdmin?<div style={{textAlign:"right"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.06em",marginBottom:3}}>BUDGET</div><div style={{fontSize:15,fontWeight:600,color:"var(--text)",fontFamily:"'DM Mono',monospace"}}>{fmtK(p.budget)}</div></div>:<div/>}
+            {[["TYPE",p.type],["SHOOT",p.shoot||"TBD"]].map(([k,v])=><div key={k}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginBottom:3}}>{k}</div><div style={{fontSize:13,color:"var(--text2)"}}>{v}</div></div>)}
+            {isAdmin?<div style={{textAlign:"right"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginBottom:3}}>BUDGET</div><div style={{fontSize:15,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace"}}>{fmtK(p.budget)}</div></div>:<div/>}
           </div>
-          {p.location&&<div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontFamily:"'DM Mono',monospace"}}>📍 {p.location}</div>}
+          {p.location&&<div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontFamily:"'Geist Mono',monospace"}}>📍 {p.location}</div>}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{(p.tags||[]).slice(0,3).map(t=><span key={t} className="tchip">{t}</span>)}</div>
             <div style={{display:"flex"}}>{crew.slice(0,4).map((c,j)=><div key={c.id} style={{marginLeft:j>0?-7:0,zIndex:10-j}}><Av name={c.name} idx={allCrew.indexOf(c)} size={24}/></div>)}{crew.length>4&&<div style={{width:24,height:24,borderRadius:"50%",background:"var(--bg4)",border:"2px solid var(--bg2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--text3)",marginLeft:-7}}>+{crew.length-4}</div>}</div>
           </div>
-          <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",opacity:.6}}>View →</div>
+          <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",opacity:.6}}>View →</div>
         </div>;
       })}
     </div>
@@ -414,7 +437,7 @@ function InvoiceCard({inv,onOpen,onUpdateAmount,onUpdateStatus}){
         <div style={{minWidth:0,flex:1,marginRight:10}}>
           <div style={{fontSize:14,fontWeight:600,color:"var(--text)",marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{inv.project}</div>
           <div style={{fontSize:12,color:"var(--text2)"}}>{inv.client}</div>
-          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginTop:2}}>{inv.invoiceNo}</div>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginTop:2}}>{inv.invoiceNo}</div>
         </div>
         <div data-nc="1" onClick={e=>e.stopPropagation()}>
           <StCell status={inv.status} onChange={onUpdateStatus}/>
@@ -424,13 +447,13 @@ function InvoiceCard({inv,onOpen,onUpdateAmount,onUpdateStatus}){
         <div data-nc="1" onClick={e=>e.stopPropagation()}>
           <ACell value={inv.amount} onChange={onUpdateAmount}/>
         </div>
-        <div style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Due {inv.due}</div>
+        <div style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Due {inv.due}</div>
       </div>
       {rec>0&&<div style={{marginTop:6}}>
         <div style={{height:3,borderRadius:3,background:"var(--bg4)",overflow:"hidden",marginBottom:4}}>
           <div style={{height:"100%",width:`${pct}%`,background:"var(--green)",borderRadius:3,transition:"width .4s"}}/>
         </div>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div>
       </div>}
     </div>
   );
@@ -461,9 +484,9 @@ function FinanceView(){
       <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} inv`} color="var(--red)" icon="⚠" delay={150}/>
     </div>
     <div className="card" style={{padding:"16px 20px",marginBottom:18}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Revenue overview</span><span style={{fontSize:15,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{fmt(total)} total</span></div>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Revenue overview</span><span style={{fontSize:15,fontWeight:600,fontFamily:"'Geist Mono',monospace"}}>{fmt(total)} total</span></div>
       <div style={{height:5,borderRadius:5,overflow:"hidden",display:"flex",background:"var(--bg4)"}}>{[[paid+partial,"var(--green)"],[pending,"var(--amber)"],[overdue,"var(--red)"]].map(([v,c],idx)=><div key={idx} style={{width:`${(v/total)*100}%`,background:c,transition:"width .5s ease"}}/>)}</div>
-      <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
+      <div style={{display:"flex",gap:12,marginTop:10,flexWrap:"wrap"}}>{[["Collected","var(--green)",paid+partial],["Outstanding","var(--amber)",pending],["Overdue","var(--red)",overdue]].map(([l,c,v])=><div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:2,background:c}}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{l} {((v/total)*100).toFixed(0)}%</span></div>)}</div>
     </div>
     <div style={{display:"flex",gap:10,marginBottom:14}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New invoice</button><button className="btn-g" onClick={expCSV}>↓ CSV</button></div>
 
@@ -476,14 +499,14 @@ function FinanceView(){
       /* DESKTOP: table layout */
       <div className="card" style={{overflow:"visible"}}>
         <div style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",background:"var(--bg3)",borderBottom:"1px solid var(--border)",borderRadius:"12px 12px 0 0"}}>
-          {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
+          {["Invoice","Project","Client","Amount","Due","Status"].map(h=><div key={h} style={{padding:"10px 16px",fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.07em",textTransform:"uppercase"}}>{h}</div>)}
         </div>
         {invoices.map((inv,i)=>{const rec=totalRec(inv);return <div key={inv.id} className="row-h fade-up" style={{display:"grid",gridTemplateColumns:"1.1fr 2fr 1fr 1.4fr 1fr 1.4fr",borderBottom:i<invoices.length-1?"1px solid var(--border)":"none",alignItems:"center",animationDelay:`${i*45}ms`,cursor:"pointer"}} onClick={e=>{if(!e.target.closest("[data-nc]"))setSelected(inv.id);}}>
-          <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'DM Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
+          <div style={{padding:"13px 16px",fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</div>
           <div style={{padding:"13px 16px",fontSize:14,fontWeight:500,color:"var(--text)"}}>{inv.project}</div>
           <div style={{padding:"13px 16px",fontSize:13,color:"var(--text2)"}}>{inv.client}</div>
-          <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
-          <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
+          <div data-nc="1" onClick={e=>e.stopPropagation()} style={{minWidth:0}}><ACell value={inv.amount} onChange={v=>upd(inv.id,{amount:v})}/>{rec>0&&rec<inv.amount&&<div style={{paddingLeft:16,paddingBottom:4}}><div style={{height:2,background:"var(--bg4)",borderRadius:2,overflow:"hidden",width:"80%"}}><div style={{height:"100%",width:`${(rec/inv.amount)*100}%`,background:"var(--green)",borderRadius:2}}/></div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginTop:2}}>{fmt(rec)} rec.</div></div>}</div>
+          <div style={{padding:"13px 16px",fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text2)"}}>{inv.due}</div>
           <div data-nc="1" onClick={e=>e.stopPropagation()}><StCell status={inv.status} onChange={st=>upd(inv.id,{status:st})}/></div>
         </div>;})}
       </div>
@@ -522,37 +545,37 @@ function ClientsView({role}){
         {!c.hasOverdue&&c.hasPending&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"var(--amber)"}}/>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14,gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-            <div style={{width:44,height:44,borderRadius:11,background:BRAND_GRADS[i%BRAND_GRADS.length],display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(0,0,0,.35)"}}><span style={{fontSize:15,fontWeight:700,color:"rgba(255,255,255,0.92)",fontFamily:"'DM Sans',sans-serif"}}>{initials}</span></div>
-            <div style={{minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginBottom:4}}>{c.name}</div><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{c.isRegular&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"1px 7px"}}>Regular</span>}{c.hasOverdue&&isAdmin&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",background:"var(--red-bg)",color:"var(--red)",border:"1px solid rgba(255,69,58,.2)",borderRadius:20,padding:"1px 7px"}}>Overdue</span>}</div></div>
+            <div style={{width:44,height:44,borderRadius:11,background:BRAND_GRADS[i%BRAND_GRADS.length],display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(0,0,0,.35)"}}><span style={{fontSize:15,fontWeight:700,color:"rgba(255,255,255,0.92)",fontFamily:"'Geist',sans-serif"}}>{initials}</span></div>
+            <div style={{minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginBottom:4}}>{c.name}</div><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{c.isRegular&&<span style={{fontSize:10,fontFamily:"'Geist Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"1px 7px"}}>Regular</span>}{c.hasOverdue&&isAdmin&&<span style={{fontSize:10,fontFamily:"'Geist Mono',monospace",background:"var(--red-bg)",color:"var(--red)",border:"1px solid rgba(255,69,58,.2)",borderRadius:20,padding:"1px 7px"}}>Overdue</span>}</div></div>
           </div>
-          {isAdmin&&<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:3}}>BILLED</div><div style={{fontSize:15,fontWeight:600,color:"var(--text)",fontFamily:"'DM Mono',monospace"}}>{fmtK(c.totalBilled)}</div></div>}
+          {isAdmin&&<div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:3}}>BILLED</div><div style={{fontSize:15,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace"}}>{fmtK(c.totalBilled)}</div></div>}
         </div>
         <div style={{display:"grid",gridTemplateColumns:isAdmin?"1fr 1fr 1fr":"1fr",gap:10,paddingTop:12,borderTop:"1px solid var(--border)"}}>
-          <div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:3}}>PROJECTS</div><div style={{fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:"'DM Mono',monospace"}}>{c.projects.length}</div></div>
-          {isAdmin&&<div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:3}}>RECEIVED</div><div style={{fontSize:13,fontWeight:600,color:"var(--green)",fontFamily:"'DM Mono',monospace"}}>{fmtK(c.totalReceived)}</div></div>}
-          {isAdmin&&<div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:3}}>OUTSTANDING</div><div style={{fontSize:13,fontWeight:600,color:c.outstanding>0?"var(--red)":"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{c.outstanding>0?fmtK(c.outstanding):"—"}</div></div>}
+          <div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:3}}>PROJECTS</div><div style={{fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace"}}>{c.projects.length}</div></div>
+          {isAdmin&&<div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:3}}>RECEIVED</div><div style={{fontSize:13,fontWeight:600,color:"var(--green)",fontFamily:"'Geist Mono',monospace"}}>{fmtK(c.totalReceived)}</div></div>}
+          {isAdmin&&<div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:3}}>OUTSTANDING</div><div style={{fontSize:13,fontWeight:600,color:c.outstanding>0?"var(--red)":"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{c.outstanding>0?fmtK(c.outstanding):"—"}</div></div>}
         </div>
-        <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",opacity:.6}}>View →</div>
+        <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",opacity:.6}}>View →</div>
       </div>;})}
     </div>
     {sel&&(<><div className="povl" onClick={()=>setSelected(null)}/><div className="panel">
-      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+      <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
             <div style={{width:52,height:52,borderRadius:14,background:BRAND_GRADS[sel.idx%BRAND_GRADS.length],display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 6px 20px rgba(0,0,0,.4)"}}><span style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.92)"}}>{sel.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}</span></div>
-            <div><div style={{fontSize:19,fontWeight:700,color:"var(--text)"}}>{sel.name}</div><div style={{display:"flex",gap:6,marginTop:4}}>{sel.isRegular&&<span style={{fontSize:11,fontFamily:"'DM Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"2px 9px"}}>Regular</span>}{sel.hasOverdue&&isAdmin&&<span style={{fontSize:11,fontFamily:"'DM Mono',monospace",background:"var(--red-bg)",color:"var(--red)",border:"1px solid rgba(255,69,58,.2)",borderRadius:20,padding:"2px 9px"}}>⚠ Overdue</span>}</div></div>
+            <div><div style={{fontSize:19,fontWeight:700,color:"var(--text)"}}>{sel.name}</div><div style={{display:"flex",gap:6,marginTop:4}}>{sel.isRegular&&<span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"2px 9px"}}>Regular</span>}{sel.hasOverdue&&isAdmin&&<span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"var(--red-bg)",color:"var(--red)",border:"1px solid rgba(255,69,58,.2)",borderRadius:20,padding:"2px 9px"}}>⚠ Overdue</span>}</div></div>
           </div>
           <button onClick={()=>setSelected(null)} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
       </div>
-      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Financial summary</div>
+      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Financial summary</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}} className="g2">
-          {[["Total billed",fmt(sel.totalBilled),"var(--text)"],["Received",fmt(sel.totalReceived),"var(--green)"],["Outstanding",fmt(sel.outstanding),sel.outstanding>0?"var(--red)":"var(--text3)"],["Projects",sel.projects.length,"var(--accent)"]].map(([k,v,c])=><div key={k} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",textTransform:"uppercase",marginBottom:6}}>{k}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'DM Mono',monospace"}}>{v}</div></div>)}
+          {[["Total billed",fmt(sel.totalBilled),"var(--text)"],["Received",fmt(sel.totalReceived),"var(--green)"],["Outstanding",fmt(sel.outstanding),sel.outstanding>0?"var(--red)":"var(--text3)"],["Projects",sel.projects.length,"var(--accent)"]].map(([k,v,c])=><div key={k} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",textTransform:"uppercase",marginBottom:6}}>{k}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'Geist Mono',monospace"}}>{v}</div></div>)}
         </div>
         {sel.outstanding>0&&<div style={{background:"rgba(255,69,58,.06)",border:"1px solid rgba(255,69,58,.18)",borderRadius:9,padding:"11px 14px",display:"flex",alignItems:"center",gap:8}}><span>⚠</span><span style={{fontSize:13,color:"var(--red)"}}>{fmt(sel.outstanding)} pending. Follow up required.</span></div>}
       </div>}
-      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Projects ({sel.projects.length})</div>{sel.projects.map(p=><div key={p.id} className="drow"><div><div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:3}}>{p.title}</div><div style={{fontSize:11,color:"var(--text3)"}}>{p.type} · {p.shoot||"TBD"}{p.location&&` · 📍 ${p.location}`}</div></div><div style={{textAlign:"right"}}><Badge status={p.status}/>{isAdmin&&<div style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text2)",marginTop:5}}>{fmt(p.budget)}</div>}</div></div>)}</div>
-      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Invoices ({sel.invoices.length})</div>{sel.invoices.map(inv=>{const rec=totalRec(inv);return <div key={inv.id} style={{background:"var(--bg3)",border:`1px solid ${inv.status==="Overdue"?"rgba(255,69,58,.25)":inv.status==="Partial"?"rgba(255,159,10,.2)":"var(--border)"}`,borderRadius:10,padding:"14px 16px",marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</span><Badge status={inv.status}/></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:rec>0?8:0}}><span style={{fontSize:14,fontWeight:600,color:"var(--text)",fontFamily:"'DM Mono',monospace"}}>{fmt(inv.amount)}</span><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Due {inv.due}</span></div>{rec>0&&<div><div style={{height:3,background:"var(--bg4)",borderRadius:3,overflow:"hidden",marginBottom:4}}><div style={{height:"100%",width:`${Math.min(100,(rec/inv.amount)*100)}%`,background:"var(--green)",borderRadius:3}}/></div><div style={{fontSize:11,color:"var(--text3)"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div></div>}{inv.status==="Overdue"&&<div style={{marginTop:8,fontSize:12,color:"var(--red)"}}>⚠ {fmt(inv.amount-rec)} unpaid</div>}</div>;})}</div>}
+      <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Projects ({sel.projects.length})</div>{sel.projects.map(p=><div key={p.id} className="drow"><div><div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:3}}>{p.title}</div><div style={{fontSize:11,color:"var(--text3)"}}>{p.type} · {p.shoot||"TBD"}{p.location&&` · 📍 ${p.location}`}</div></div><div style={{textAlign:"right"}}><Badge status={p.status}/>{isAdmin&&<div style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text2)",marginTop:5}}>{fmt(p.budget)}</div>}</div></div>)}</div>
+      {isAdmin&&<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Invoices ({sel.invoices.length})</div>{sel.invoices.map(inv=>{const rec=totalRec(inv);return <div key={inv.id} style={{background:"var(--bg3)",border:`1px solid ${inv.status==="Overdue"?"rgba(255,69,58,.25)":inv.status==="Partial"?"rgba(255,159,10,.2)":"var(--border)"}`,borderRadius:10,padding:"14px 16px",marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:"var(--text3)"}}>{inv.invoiceNo}</span><Badge status={inv.status}/></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:rec>0?8:0}}><span style={{fontSize:14,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace"}}>{fmt(inv.amount)}</span><span style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Due {inv.due}</span></div>{rec>0&&<div><div style={{height:3,background:"var(--bg4)",borderRadius:3,overflow:"hidden",marginBottom:4}}><div style={{height:"100%",width:`${Math.min(100,(rec/inv.amount)*100)}%`,background:"var(--green)",borderRadius:3}}/></div><div style={{fontSize:11,color:"var(--text3)"}}>{fmt(rec)} received · {fmt(inv.amount-rec)} outstanding</div></div>}{inv.status==="Overdue"&&<div style={{marginTop:8,fontSize:12,color:"var(--red)"}}>⚠ {fmt(inv.amount-rec)} unpaid</div>}</div>;})}</div>}
     </div></>)}
   </div>);
 }
@@ -584,14 +607,14 @@ function CrewView({allCrew,setAllCrew,projects,role}){
           <div style={{flex:1,minWidth:0}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}><span style={{fontSize:15,fontWeight:600,color:"var(--text)"}}>{c.name}</span><RBadge role={c.role}/></div>
             {c.location&&<div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>📍 {c.location}</div>}
-            <div style={{fontSize:12,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'DM Mono',monospace"}}>{c.phone||<span style={{color:"var(--text3)",fontStyle:"italic",fontFamily:"inherit"}}>No phone</span>}</span></div>
+            <div style={{fontSize:12,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{c.phone||<span style={{color:"var(--text3)",fontStyle:"italic",fontFamily:"inherit"}}>No phone</span>}</span></div>
             {c.email&&<div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>✉ {c.email}</div>}
           </div>
         </div>
         {(c.tags||[]).length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}>{c.tags.map(t=><span key={t} className="tchip">{t}</span>)}</div>}
         <div style={{paddingTop:10,borderTop:"1px solid var(--border)",display:"flex",justifyContent:"space-between"}}>
           <div style={{fontSize:12,color:"var(--text3)"}}>{cP.length} project{cP.length!==1?"s":""}</div>
-          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",opacity:.6}}>View →</div>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",opacity:.6}}>View →</div>
         </div>
       </div>;})}
     </div>
@@ -599,16 +622,16 @@ function CrewView({allCrew,setAllCrew,projects,role}){
       const m=allCrew.find(x=>x.id===selected);if(!m)return null;
       const cP=projects.filter(p=>m.projects.includes(p.id));const idx=allCrew.findIndex(x=>x.id===selected);
       return <><div className="povl" onClick={()=>setSelected(null)}/><div className="panel" style={{width:460}}>
-        <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+        <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div style={{display:"flex",alignItems:"center",gap:14}}><Av name={m.name} idx={idx} size={46}/><div><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:4}}>{m.name}</div><RBadge role={m.role}/>{m.phone&&<div style={{fontSize:12,color:"var(--text2)",marginTop:5,display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'DM Mono',monospace"}}>{m.phone}</span></div>}</div></div>
+            <div style={{display:"flex",alignItems:"center",gap:14}}><Av name={m.name} idx={idx} size={46}/><div><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:4}}>{m.name}</div><RBadge role={m.role}/>{m.phone&&<div style={{fontSize:12,color:"var(--text2)",marginTop:5,display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{m.phone}</span></div>}</div></div>
             <div style={{display:"flex",gap:8}}>
               {isAdmin&&<button onClick={()=>{if(window.confirm(`Remove ${m.name}?`)){delM(m.id);setSelected(null);}}} style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>}
               <button onClick={()=>setSelected(null)} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           </div>
         </div>
-        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Contact</div>
+        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Contact</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div><Lbl ch="Full name"/>{isAdmin?<Inp value={m.name||""} onChange={v=>updM(m.id,{name:v})} placeholder="Full name"/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.name}</div>}</div>
             <div><Lbl ch="Role"/>{isAdmin?<Sel value={m.role} onChange={v=>updM(m.id,{role:v})} options={CREW_ROLES}/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.role}</div>}</div>
@@ -619,9 +642,9 @@ function CrewView({allCrew,setAllCrew,projects,role}){
             <div><Lbl ch="Location"/>{isAdmin?<Inp value={m.location||""} onChange={v=>updM(m.id,{location:v})} placeholder="Mumbai"/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.location||"—"}</div>}</div>
           </div>
         </div>
-        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Tags</div>{isAdmin?<ETags tags={m.tags||[]} onAdd={t=>updM(m.id,{tags:[...(m.tags||[]),t]})} onDelete={t=>updM(m.id,{tags:(m.tags||[]).filter(x=>x!==t)})}/>:<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{(m.tags||[]).map(t=><span key={t} className="tchip">{t}</span>)}</div>}</div>
-        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Notes</div>{isAdmin?<ENotes notes={m.notes} onSave={v=>updM(m.id,{notes:v})}/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.notes||<span style={{color:"var(--text3)",fontStyle:"italic"}}>No notes.</span>}</div>}</div>
-        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Projects ({cP.length})</div>{cP.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>Not assigned yet.</div>:cP.map(p=><div key={p.id} className="drow"><div><div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:3}}>{p.title}</div><div style={{fontSize:11,color:"var(--text3)"}}>{p.client} · {p.type}{p.location&&` · 📍 ${p.location}`}</div></div><div style={{textAlign:"right"}}><Badge status={p.status}/></div></div>)}</div>
+        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Tags</div>{isAdmin?<ETags tags={m.tags||[]} onAdd={t=>updM(m.id,{tags:[...(m.tags||[]),t]})} onDelete={t=>updM(m.id,{tags:(m.tags||[]).filter(x=>x!==t)})}/>:<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{(m.tags||[]).map(t=><span key={t} className="tchip">{t}</span>)}</div>}</div>
+        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:12}}>Notes</div>{isAdmin?<ENotes notes={m.notes} onSave={v=>updM(m.id,{notes:v})}/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.notes||<span style={{color:"var(--text3)",fontStyle:"italic"}}>No notes.</span>}</div>}</div>
+        <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Projects ({cP.length})</div>{cP.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>Not assigned yet.</div>:cP.map(p=><div key={p.id} className="drow"><div><div style={{fontSize:13,fontWeight:500,color:"var(--text)",marginBottom:3}}>{p.title}</div><div style={{fontSize:11,color:"var(--text3)"}}>{p.client} · {p.type}{p.location&&` · 📍 ${p.location}`}</div></div><div style={{textAlign:"right"}}><Badge status={p.status}/></div></div>)}</div>
       </div></>;
     })()}
     {isAdmin&&showAdd&&<Modal title="Add crew member" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
@@ -665,14 +688,14 @@ function QuotesView({projects}){
         <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:(SC[q.status]||{dot:"var(--text3)"}).dot}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}><div><div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:3}}>{q.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{q.client}</div></div><Badge status={q.status}/></div>
         <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,borderTop:"1px solid var(--border)"}}>
-          <div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",marginBottom:3}}>TOTAL (incl. GST)</div><div style={{fontSize:16,fontWeight:600,fontFamily:"'DM Mono',monospace",color:"var(--text)"}}>{fmt(grand(q))}</div></div>
+          <div><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginBottom:3}}>TOTAL (incl. GST)</div><div style={{fontSize:16,fontWeight:600,fontFamily:"'Geist Mono',monospace",color:"var(--text)"}}>{fmt(grand(q))}</div></div>
           <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"var(--text3)"}}>{(q.lines||[]).length} items</div><div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{q.createdAt}</div></div>
         </div>
-        <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",opacity:.6}}>Edit →</div>
+        <div style={{position:"absolute",bottom:14,right:18,fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",opacity:.6}}>Edit →</div>
       </div>)}
     </div>
     {selQ&&(<><div className="povl" onClick={()=>setSelected(null)}/><div className="panel" style={{width:580}}>
-      <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
+      <div style={{padding:"18px 24px 14px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"var(--panel-bg)",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div><div style={{fontSize:17,fontWeight:700,color:"var(--text)"}}>{selQ.title}</div><div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{selQ.client}{selQ.project&&` · ${selQ.project}`}</div></div>
           <div style={{display:"flex",gap:8}}>
@@ -681,22 +704,22 @@ function QuotesView({projects}){
             <button onClick={()=>setSelected(null)} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
           </div>
         </div>
-        <div style={{display:"flex",gap:6,marginTop:10}}>{["Draft","Sent","Approved"].map(st=>{const act=selQ.status===st;const ss=SC[st];return <button key={st} onClick={()=>updQ(selQ.id,{status:st})} style={{fontSize:11,fontFamily:"'DM Mono',monospace",padding:"3px 12px",borderRadius:20,cursor:"pointer",background:act?ss.bg:"transparent",color:act?ss.dot:"var(--text2)",border:`1px solid ${act?ss.bd:"var(--border)"}`}}>{st}</button>;})}</div>
+        <div style={{display:"flex",gap:6,marginTop:10}}>{["Draft","Sent","Approved"].map(st=>{const act=selQ.status===st;const ss=SC[st];return <button key={st} onClick={()=>updQ(selQ.id,{status:st})} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",padding:"3px 12px",borderRadius:20,cursor:"pointer",background:act?ss.bg:"transparent",color:act?ss.dot:"var(--text2)",border:`1px solid ${act?ss.bd:"var(--border)"}`}}>{st}</button>;})}</div>
       </div>
       <div className="ps">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase"}}>Line items</div><button className="btn-g" style={{fontSize:12,padding:"4px 12px"}} onClick={()=>updQ(selQ.id,{lines:[...(selQ.lines||[]),{id:Date.now(),desc:"",cat:"Day Rate",qty:1,rate:0}]})}>+ Add line</button></div>
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 0.5fr 0.8fr 0.8fr 28px",gap:6,marginBottom:6}}>{["Description","Category","Qty","Rate (₹)","Amount",""].map(h=><div key={h} style={{fontSize:10,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.05em"}}>{h}</div>)}</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase"}}>Line items</div><button className="btn-g" style={{fontSize:12,padding:"4px 12px"}} onClick={()=>updQ(selQ.id,{lines:[...(selQ.lines||[]),{id:Date.now(),desc:"",cat:"Day Rate",qty:1,rate:0}]})}>+ Add line</button></div>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 0.5fr 0.8fr 0.8fr 28px",gap:6,marginBottom:6}}>{["Description","Category","Qty","Rate (₹)","Amount",""].map(h=><div key={h} style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em"}}>{h}</div>)}</div>
         {(selQ.lines||[]).map((l,i)=><div key={l.id} style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 0.5fr 0.8fr 0.8fr 28px",gap:6,marginBottom:8,alignItems:"center"}}>
           <input className="input" value={l.desc} onChange={e=>{const n=[...selQ.lines];n[i]={...n[i],desc:e.target.value};updQ(selQ.id,{lines:n});}} placeholder="e.g. Director day rate" style={{padding:"7px 10px",fontSize:13}}/>
           <select className="input" value={l.cat} onChange={e=>{const n=[...selQ.lines];n[i]={...n[i],cat:e.target.value};updQ(selQ.id,{lines:n});}} style={{padding:"7px 8px",fontSize:12}}>{QLCATS.map(c=><option key={c}>{c}</option>)}</select>
           <input className="input" type="number" value={l.qty} onChange={e=>{const n=[...selQ.lines];n[i]={...n[i],qty:Number(e.target.value)||1};updQ(selQ.id,{lines:n});}} style={{padding:"7px 8px",fontSize:13,textAlign:"center"}}/>
           <input className="input" type="number" value={l.rate} onChange={e=>{const n=[...selQ.lines];n[i]={...n[i],rate:Number(e.target.value)||0};updQ(selQ.id,{lines:n});}} style={{padding:"7px 8px",fontSize:13}}/>
-          <div style={{fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:"'DM Mono',monospace",textAlign:"right"}}>{fmtK(l.qty*l.rate)}</div>
+          <div style={{fontSize:13,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace",textAlign:"right"}}>{fmtK(l.qty*l.rate)}</div>
           <button onClick={()=>updQ(selQ.id,{lines:selQ.lines.filter((_,j)=>j!==i)})} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:13}}>✕</button>
         </div>)}
         <div style={{borderTop:"1px solid var(--border)",marginTop:8,paddingTop:12}}>
-          {[["Subtotal",fmt(sub(selQ))],[`GST (${selQ.taxPct}%)`,fmt(tax(selQ))]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"var(--text2)",marginBottom:6}}><span>{k}</span><span style={{fontFamily:"'DM Mono',monospace"}}>{v}</span></div>)}
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:700,color:"var(--text)",borderTop:"1px solid var(--border2)",paddingTop:8,marginTop:6}}><span>Grand Total</span><span style={{fontFamily:"'DM Mono',monospace",color:"var(--green)"}}>{fmt(grand(selQ))}</span></div>
+          {[["Subtotal",fmt(sub(selQ))],[`GST (${selQ.taxPct}%)`,fmt(tax(selQ))]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"var(--text2)",marginBottom:6}}><span>{k}</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{v}</span></div>)}
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:700,color:"var(--text)",borderTop:"1px solid var(--border2)",paddingTop:8,marginTop:6}}><span>Grand Total</span><span style={{fontFamily:"'Geist Mono',monospace",color:"var(--green)"}}>{fmt(grand(selQ))}</span></div>
         </div>
         <div style={{marginTop:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <div><Lbl ch="Valid until"/><Inp type="date" value={selQ.validUntil} onChange={v=>updQ(selQ.id,{validUntil:v})}/></div>
@@ -713,6 +736,144 @@ function QuotesView({projects}){
       <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={()=>setShowAdd(false)}>Cancel</button><button className="btn-p" onClick={create}>Create quote</button></div>
     </div></Modal>}
   </div>);
+}
+
+
+/* ── ABOUT PAGE ── */
+const SEED_ABOUT={
+  name:"Aki Mehta",title:"Project Manager & Content Strategist",
+  studio:LS.get("frameOS_studioName","Frame OS"),tagline:"Journey Curators",
+  phone:"+91 70212 91405",email:"yashmehtaoffice@gmail.com",website:"yashmehtawork.netlify.app",
+  services:"TVC Production · Brand Films · Product Shoots · Digital Content · Travel Content",
+  bio:"Passionate about crafting visual stories that resonate. With 4+ years across events, tourism, and media production, I bring both creative vision and production discipline to every project.",
+  instagram:"linktr.ee/MehtaYash",linkedin:"linkedin.com/in/yash-mehta",
+  logoColor:"#1a2f6e",
+};
+
+function AboutView({role}){
+  const isAdmin=role==="admin";
+  const[about,setAbout]=usePersist("frameOS_about",SEED_ABOUT);
+  const[editing,setEditing]=useState(false);
+  const[draft,setDraft]=useState(about);
+  const ds=k=>v=>setDraft(d=>({...d,[k]:v}));
+  const save=()=>{setAbout(draft);setEditing(false);};
+  const cancel=()=>{setDraft(about);setEditing(false);};
+  const initials=(about.studio||"FO").substring(0,2).toUpperCase();
+  const nameInitials=(about.name||"A").split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+
+  return(
+    <div style={{maxWidth:680,margin:"0 auto"}}>
+      {/* Hero card */}
+      <div className="card fade-up" style={{padding:"32px 28px",marginBottom:16,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,var(--accent),var(--purple))"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+          {/* Avatar */}
+          <div style={{width:72,height:72,borderRadius:20,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>{nameInitials}</div>
+          <div style={{flex:1,minWidth:0}}>
+            {editing?(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <Inp value={draft.name} onChange={ds("name")} placeholder="Your name"/>
+                <Inp value={draft.title} onChange={ds("title")} placeholder="Your title / role"/>
+              </div>
+            ):(
+              <>
+                <div style={{fontSize:22,fontWeight:700,color:"var(--text)",marginBottom:4}}>{about.name}</div>
+                <div style={{fontSize:14,color:"var(--text2)"}}>{about.title}</div>
+              </>
+            )}
+          </div>
+          {isAdmin&&!editing&&<button className="btn-g" style={{fontSize:12,padding:"6px 14px",flexShrink:0}} onClick={()=>{setDraft(about);setEditing(true);}}>✎ Edit</button>}
+        </div>
+        {editing&&<div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}><button className="btn-g" style={{fontSize:12}} onClick={cancel}>Cancel</button><button className="btn-p" style={{fontSize:12}} onClick={save}>Save changes</button></div>}
+      </div>
+
+      {/* Production house card */}
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"40ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Production House</div>
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:16}}>
+          <div style={{width:52,height:52,borderRadius:14,background:about.logoColor||"#1a2f6e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:800,color:"rgba(255,255,255,0.92)",flexShrink:0,boxShadow:"0 4px 14px rgba(0,0,0,.2)"}}>{initials}</div>
+          <div style={{flex:1,minWidth:0}}>
+            {editing?(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <Inp value={draft.studio} onChange={ds("studio")} placeholder="Production house name"/>
+                <Inp value={draft.tagline} onChange={ds("tagline")} placeholder="Tagline e.g. Journey Curators"/>
+              </div>
+            ):(
+              <>
+                <div style={{fontSize:18,fontWeight:700,color:"var(--text)"}}>{about.studio||"Frame OS"}</div>
+                <div style={{fontSize:13,color:"var(--text2)",fontStyle:"italic"}}>{about.tagline}</div>
+              </>
+            )}
+          </div>
+          {editing&&<div><Lbl ch="Logo colour"/><input type="color" value={about.logoColor||"#1a2f6e"} onChange={e=>setDraft(d=>({...d,logoColor:e.target.value}))} style={{width:36,height:36,border:"none",borderRadius:8,cursor:"pointer",background:"transparent"}}/></div>}
+        </div>
+        {editing?(
+          <div><Lbl ch="Bio / About"/><TA value={draft.bio} onChange={ds("bio")} placeholder="A short bio about you and your work…"/></div>
+        ):(
+          about.bio&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.8,background:"var(--bg3)",borderRadius:9,padding:"12px 14px"}}>{about.bio}</div>
+        )}
+      </div>
+
+      {/* Contact card */}
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"80ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
+        {editing?(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="g2">
+              <div><Lbl ch="Phone"/><Inp value={draft.phone} onChange={ds("phone")} placeholder="+91 98765 43210"/></div>
+              <div><Lbl ch="Email"/><Inp value={draft.email} onChange={ds("email")} placeholder="email@example.com"/></div>
+            </div>
+            <div><Lbl ch="Website"/><Inp value={draft.website} onChange={ds("website")} placeholder="yoursite.com"/></div>
+          </div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {[["📞",about.phone],["✉",about.email],["🌐",about.website]].filter(([,v])=>v).map(([icon,val])=>(
+              <div key={val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",borderRadius:9}}>
+                <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                <span style={{fontSize:13,color:"var(--text)",fontFamily:icon==="✉"||icon==="🌐"?"'Geist Mono',monospace":"inherit"}}>{val}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Services card */}
+      <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"120ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Services</div>
+        {editing?(
+          <Inp value={draft.services} onChange={ds("services")} placeholder="TVC · Brand Films · Product Shoots · Digital Content"/>
+        ):(
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {(about.services||"").split("·").map(s=>s.trim()).filter(Boolean).map(s=>(
+              <span key={s} style={{fontSize:12,fontFamily:"'Geist Mono',monospace",background:"var(--accent-bg)",color:"var(--accent)",border:"1px solid var(--accent-bd)",borderRadius:20,padding:"4px 12px"}}>{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Social links card */}
+      <div className="card fade-up" style={{padding:"24px 28px",animationDelay:"160ms"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Social & Links</div>
+        {editing?(
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div><Lbl ch="Instagram / Linktree"/><Inp value={draft.instagram} onChange={ds("instagram")} placeholder="linktr.ee/yourname"/></div>
+            <div><Lbl ch="LinkedIn"/><Inp value={draft.linkedin} onChange={ds("linkedin")} placeholder="linkedin.com/in/yourname"/></div>
+          </div>
+        ):(
+          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+            {[["🔗",about.instagram,"Linktree"],["💼",about.linkedin,"LinkedIn"]].filter(([,v])=>v).map(([icon,val,label])=>(
+              <a key={label} href={val.startsWith("http")?"https://"+val.replace(/^https?:\/\//,""):("https://"+val)} target="_blank" rel="noreferrer"
+                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,textDecoration:"none",color:"var(--text)",fontSize:13,transition:"border-color .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--accent)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
+                <span style={{fontSize:16}}>{icon}</span><span>{label}</span><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",marginLeft:4}}>{val}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 
@@ -761,7 +922,7 @@ function SplashScreen({onDone,studioName}){
         <span style={{
           fontSize:"clamp(80px,20vw,128px)",
           fontWeight:800,
-          fontFamily:"'DM Sans',sans-serif",
+          fontFamily:"'Geist',sans-serif",
           letterSpacing:"0.04em",
           color:"#f2f2f7",
           lineHeight:1,
@@ -794,7 +955,7 @@ function SplashScreen({onDone,studioName}){
       {/* Studio name */}
       <div style={{
         fontSize:11,
-        fontFamily:"'DM Mono',monospace",
+        fontFamily:"'Geist Mono',monospace",
         letterSpacing:"0.32em",
         textTransform:"uppercase",
         color:"#6e6e73",
@@ -825,7 +986,7 @@ function LockScreen({onUnlock,studioName}){
         <button className="btn-p" style={{width:"100%",padding:"11px",fontSize:15}} onClick={attempt}>Unlock</button>
       </div>
       <div style={{marginTop:20,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px"}}>
-        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Access levels</div>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Access levels</div>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--accent)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Admin</b> — full access, edit everything</span></div>
           <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--green)",display:"inline-block",flexShrink:0}}/><span><b style={{color:"var(--text)"}}>Viewer</b> — read-only, no financial data</span></div>
@@ -842,37 +1003,37 @@ function ChangePassModal({onClose,onSave,viewerPassword,onSaveViewer}){
   const saveA=()=>{if(!cur||!next){setErr("Fill all fields.");return;}if(next!==conf){setErr("Passwords don't match.");return;}if(next.length<4){setErr("Min 4 characters.");return;}onSave(cur,next);setErr("");};
   const saveV=()=>{if(!vcur||!vnext){setVerr("Fill all fields.");return;}if(vnext!==vconf){setVerr("Passwords don't match.");return;}if(vnext.length<4){setVerr("Min 4 characters.");return;}onSaveViewer(vcur,vnext);setVerr("");};
   return(<Modal title="Manage passwords" onClose={onClose} width={440}>
-    <div style={{display:"flex",gap:4,marginBottom:18}}>{[["admin","🔒 Admin"],["viewer","👁 Viewer"]].map(([id,label])=><button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"7px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",background:tab===id?"var(--accent)":"var(--bg4)",color:tab===id?"#fff":"var(--text2)",border:`1px solid ${tab===id?"var(--accent)":"var(--border)"}`}}>{label}</button>)}</div>
+    <div style={{display:"flex",gap:4,marginBottom:18}}>{[["admin","🔒 Admin"],["viewer","👁 Viewer"]].map(([id,label])=><button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:"7px",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:"'Geist',sans-serif",background:tab===id?"var(--accent)":"var(--bg4)",color:tab===id?"#fff":"var(--text2)",border:`1px solid ${tab===id?"var(--accent)":"var(--border)"}`}}>{label}</button>)}</div>
     {tab==="admin"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Admin password unlocks full access — edit, add, delete everything.</div><div><Lbl ch="Current admin password"/><Inp type="password" value={cur} onChange={setCur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={next} onChange={setNext} placeholder="••••••••"/></div><div><Lbl ch="Confirm new"/><Inp type="password" value={conf} onChange={setConf} placeholder="••••••••"/></div>{err&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",borderRadius:8,padding:"8px 12px"}}>{err}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveA}>Update admin password</button></div></div>}
     {tab==="viewer"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--green-bg)",border:"1px solid rgba(48,209,88,.2)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Viewer password gives read-only access — no financial data, no editing.</div><div><Lbl ch="Current viewer password"/><Inp type="password" value={vcur} onChange={setVcur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={vnext} onChange={setVnext} placeholder="••••••••"/></div><div><Lbl ch="Confirm new"/><Inp type="password" value={vconf} onChange={setVconf} placeholder="••••••••"/></div>{verr&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",borderRadius:8,padding:"8px 12px"}}>{verr}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveV}>Update viewer password</button></div></div>}
   </Modal>);
 }
 
 /* ── SIDEBAR ── */
-const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"}];
-const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"}];
+const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
   const isAdmin=role==="admin";const W=collapsed?60:220;const NAV=isAdmin?NAV_A:NAV_V;
   const[editName,setEditName]=useState(false);const[draft,setDraft]=useState(studioName);const nameRef=useRef();
   useEffect(()=>{if(editName&&nameRef.current)nameRef.current.focus();},[editName]);
   const commitName=()=>{const t=draft.trim();if(t)setStudioName(t);else setDraft(studioName);setEditName(false);};
-  return(<nav className="sd" style={{width:W,minHeight:"100vh",position:"fixed",top:0,left:0,zIndex:50,background:"rgba(14,14,16,0.96)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",paddingBottom:20,transition:"width .25s cubic-bezier(.32,.72,0,1)",overflow:"hidden"}}>
+  return(<nav className="sd" style={{width:W,minHeight:"100vh",position:"fixed",top:0,left:0,zIndex:50,background:"var(--sidebar-bg)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",paddingBottom:20,transition:"width .25s cubic-bezier(.32,.72,0,1)",overflow:"hidden"}}>
     <div style={{padding:collapsed?"18px 0":"20px 16px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:10}}>
       {!collapsed&&<div style={{display:"flex",alignItems:"center",gap:10,overflow:"hidden",flex:1,minWidth:0}}>
         <div style={{width:32,height:32,borderRadius:9,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎞</div>
         <div style={{overflow:"hidden",flex:1,minWidth:0}}>
-          {editName&&isAdmin?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:700,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>:<div style={{display:"flex",alignItems:"center",gap:4,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}} title={isAdmin?"Click to rename":""}><div style={{fontSize:15,fontWeight:700,color:"var(--text)",lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studioName}</div>{isAdmin&&<span style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>✎</span>}</div>}
-          <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",marginTop:2,whiteSpace:"nowrap"}}>PRODUCTION</div>
+          {editName&&isAdmin?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:15,fontWeight:700,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>:<div style={{display:"flex",alignItems:"center",gap:4,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}} title={isAdmin?"Click to rename":""}><div style={{fontSize:15,fontWeight:700,color:"var(--text)",lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studioName}</div>{isAdmin&&<span style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>✎</span>}</div>}
+          <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",marginTop:2,whiteSpace:"nowrap"}}>PRODUCTION</div>
         </div>
       </div>}
       {collapsed&&<div style={{width:32,height:32,borderRadius:9,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🎞</div>}
       {isAdmin&&<button onClick={()=>setCollapsed(c=>!c)} style={{background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text2)",width:26,height:26,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{collapsed?"›":"‹"}</button>}
     </div>
     <div style={{flex:1,padding:collapsed?"12px 8px":"14px 10px"}}>
-      {!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>WORKSPACE</div>}
+      {!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>WORKSPACE</div>}
       {NAV.map(n=>{const act=tab===n.id;return <button key={n.id} className={`nav-s${act?" active":""}`} onClick={()=>setTab(n.id)} title={collapsed?n.label:""} style={{justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2,position:"relative"}}>{act&&!collapsed&&<span style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:2.5,borderRadius:3,background:"var(--accent)"}}/>}<span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:act?600:400,lineHeight:1.2,color:act?"var(--text)":"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:11,color:"var(--text3)",marginTop:1,whiteSpace:"nowrap"}}>{n.sub}</div></div>}</button>;})}
-      {isAdmin&&<><div style={{borderTop:"1px solid var(--border)",margin:"14px 0 10px"}}/>{!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>COMING SOON</div>}{[{label:"Assets",icon:"📁"}].map(n=><div key={n.label} className="nav-s" title={collapsed?n.label:""} style={{opacity:.35,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2}}><span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:9,color:"var(--text3)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.06em",marginTop:1}}>SOON</div></div>}</div>)}</>}
+      {isAdmin&&<><div style={{borderTop:"1px solid var(--border)",margin:"14px 0 10px"}}/>{!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>COMING SOON</div>}{[{label:"Assets",icon:"📁"}].map(n=><div key={n.label} className="nav-s" title={collapsed?n.label:""} style={{opacity:.35,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2}}><span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginTop:1}}>SOON</div></div>}</div>)}</>}
     </div>
     {!collapsed?<div style={{padding:"0 10px"}}><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:11,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}><div style={{width:28,height:28,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",flexShrink:0}}>{isAdmin?"A":"V"}</div><div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap"}}>{isAdmin?"Aki Mehta":"Viewer"}</div><div style={{fontSize:11,color:"var(--text3)",whiteSpace:"nowrap"}}>{isAdmin?"Admin · Full access":"Read only"}</div></div></div></div>:<div style={{display:"flex",justifyContent:"center",padding:"0 0 4px"}}><div title={isAdmin?"Admin":"Viewer"} style={{width:32,height:32,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",cursor:"default"}}>{isAdmin?"A":"V"}</div></div>}
   </nav>);
@@ -882,6 +1043,9 @@ function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,rol
 export default function App(){
   const[role,setRole]=useState(()=>sessionStorage.getItem("frameOS_role")||null);
   const[splash,setSplash]=useState(()=>!sessionStorage.getItem("frameOS_splashDone"));
+  const[theme,setTheme]=usePersist("frameOS_theme","dark");
+  useEffect(()=>{document.body.classList.toggle("light",theme==="light");},[theme]);
+  const toggleTheme=()=>setTheme(t=>t==="dark"?"light":"dark");
   const[password,setPassword]=usePersist("frameOS_password","frame2026");
   const[viewerPw,setViewerPw]=usePersist("frameOS_viewerPw","view2026");
   const[studioName,setStudioName]=usePersist("frameOS_studioName","Frame OS");
@@ -908,17 +1072,18 @@ export default function App(){
     <div style={{display:"flex",minHeight:"100vh",background:"var(--bg)"}}>
       <Sidebar tab={safeTab} setTab={setTab} collapsed={collapsed} setCollapsed={setCollapsed} studioName={studioName} setStudioName={setStudioName} role={role}/>
       <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
-        <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(14,14,16,0.9)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
+        <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"var(--header-glass)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
           <style>{`#hdr{padding:0 28px;}`}</style>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{pageTitle}</span>
-            {isViewer&&<span style={{fontSize:11,fontFamily:"'DM Mono',monospace",background:"var(--green-bg)",color:"var(--green)",border:"1px solid rgba(48,209,88,.2)",borderRadius:20,padding:"2px 10px"}}>View only</span>}
-            <span className="hmob" style={{fontSize:12,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
+            {isViewer&&<span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"var(--green-bg)",color:"var(--green)",border:"1px solid rgba(48,209,88,.2)",borderRadius:20,padding:"2px 10px"}}>View only</span>}
+            <span className="hmob" style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.25)",borderRadius:9,cursor:"pointer",fontSize:17,textDecoration:"none",flexShrink:0}}>💲</a>}
             {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>💲</button>}
             {isAdmin&&<button onClick={()=>setShowChgPw(true)} title="Passwords" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>🔒</button>}
+            <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>{theme==="dark"?"☀️":"🌙"}</button>
             <button onClick={()=>{sessionStorage.removeItem("frameOS_role");setRole(null);}} title="Lock" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>↩</button>
           </div>
         </header>
@@ -928,6 +1093,7 @@ export default function App(){
           {safeTab==="clients"&&<ClientsView role={role}/>}
           {safeTab==="crew"&&<CrewView allCrew={allCrew} setAllCrew={setAllCrew} projects={projects} role={role}/>}
           {safeTab==="quotes"&&isAdmin&&<QuotesView projects={projects}/>}
+          {safeTab==="about"&&<AboutView role={role}/>}
         </main>
         {/* Mobile bottom nav */}
         <nav className="bnav">
@@ -936,8 +1102,8 @@ export default function App(){
           </button>)}
         </nav>
         <footer style={{borderTop:"1px solid var(--border)",padding:"12px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>{studioName} · v2.1 · {isAdmin?"Data saved locally":"View only"}</span>
-          {isAdmin&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'DM Mono',monospace"}}>Default: frame2026 / view2026</span>}
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.1 · {isAdmin?"Data saved locally":"View only"}</span>
+          {isAdmin&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Default: frame2026 / view2026</span>}
         </footer>
       </div>
     </div>
