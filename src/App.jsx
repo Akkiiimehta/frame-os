@@ -11,7 +11,7 @@ const sb = createClient(
 
 /* ── LOCALSTORAGE (auth/settings only) ── */
 const LS={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
-function usePersist(key,init){const[val,setVal]=useState(()=>LS.get(key,typeof init==="function"?init():init));const set=useCallback((v)=>{const n=typeof v==="function"?v(val):v;LS.set(key,n);setVal(n);},[key]);return[val,set];}
+function usePersist(key,init){const[val,setVal]=useState(()=>LS.get(key,typeof init==="function"?init():init));const set=useCallback((v)=>{setVal(prev=>{const n=typeof v==="function"?v(prev):v;LS.set(key,n);return n;});},[key]);return[val,set];}
 
 /* ── DATA MAPPERS ── */
 const mpP=r=>({id:r.id,title:r.title||"",client:r.client||"",type:r.type||"TVC",status:r.status||"Pre-Production",shoot:r.shoot_date||"",budget:Number(r.budget)||0,location:r.location||"",driveLink:r.drive_link||"",tags:r.tags||[],notes:r.notes||"",crewIds:(r.crew_ids||[]).map(Number)});
@@ -23,9 +23,19 @@ const mpA=r=>({name:r.name||"Aki Mehta",title:r.title||"Project Manager & Conten
 /* ── DB HOOKS ── */
 function useDB(table,mapper){
   const[rows,setRows]=useState([]);const[loading,setLoading]=useState(true);const[error,setError]=useState(null);
-  const load=useCallback(async()=>{setLoading(true);const{data,error:e}=await sb.from(table).select("*").order("id");if(e){setError(e.message);setLoading(false);return;}setRows(mapper?data.map(mapper):data);setLoading(false);},[table]);
+  const lsKey=`frameOS_db_${table}`;
+  const load=useCallback(async()=>{setLoading(true);const{data,error:e}=await sb.from(table).select("*").order("id");if(e){setError(e.message);// fallback to localStorage
+    const cached=LS.get(lsKey,[]);setRows(mapper?cached.map(mapper):cached);setLoading(false);return;}
+    const mapped=mapper?data.map(mapper):data;
+    if(mapped.length>0){LS.set(lsKey,data);}// cache raw rows
+    else{// try restore from cache if supabase returned empty
+      const cached=LS.get(lsKey,[]);if(cached.length>0){setRows(mapper?cached.map(mapper):cached);setLoading(false);return;}}
+    setRows(mapped);setLoading(false);},[table,lsKey]);
+  // persist rows to localStorage whenever they change
+  const setRowsAndCache=useCallback((updater)=>{setRows(prev=>{const next=typeof updater==="function"?updater(prev):updater;// cache raw-ish (we store mapped for simplicity here)
+    LS.set(lsKey,next);return next;});},[lsKey]);
   useEffect(()=>{load();},[load]);
-  return[rows,setRows,loading,error,load];
+  return[rows,setRowsAndCache,loading,error,load];
 }
 
 /* ── DB WRITE HELPERS ── */
@@ -139,8 +149,8 @@ select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.
   .g4{grid-template-columns:1fr 1fr!important;}
   .hpad{padding:0 16px!important;}
   .ps{padding:14px 16px;}
-  .fscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .fscroll>div{min-width:540px;}
+  .fscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:100%;}
+  .fscroll>div{min-width:540px;width:100%;}
   .hmob{display:none!important;}
 }
 @media(max-width:480px){.g4{grid-template-columns:1fr 1fr!important;}.g3{grid-template-columns:1fr!important;}}
@@ -1033,7 +1043,7 @@ export default function App(){
     <style>{FONTS}{GS}</style>
     <div style={{display:"flex",minHeight:"100vh",background:"var(--bg)"}}>
       <Sidebar tab={safeTab} setTab={setTab} collapsed={collapsed} setCollapsed={setCollapsed} studioName={studioName} setStudioName={setStudioName} role={role}/>
-      <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
+      <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",minWidth:0,transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
         <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(14,14,16,0.9)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
           <style>{`#hdr{padding:0 28px;}`}</style>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
@@ -1049,7 +1059,7 @@ export default function App(){
             <button onClick={()=>{sessionStorage.removeItem("frameOS_role");setRole(null);}} title="Lock" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>↩</button>
           </div>
         </header>
-        <main style={{flex:1,padding:"26px 28px"}}>
+        <main style={{flex:1,padding:"26px 28px",minWidth:0,overflow:"hidden"}}>
           {safeTab==="projects"&&<ProjectsView allCrew={allCrew} setAllCrew={setAllCrew} role={role} expTrackerUrl={expUrl}/>}
           {safeTab==="finance"&&isAdmin&&<FinanceView/>}
           {safeTab==="clients"&&<ClientsView role={role}/>}
