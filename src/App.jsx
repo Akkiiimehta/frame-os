@@ -39,10 +39,50 @@ function useDB(table,mapper){
 }
 
 /* ── DB WRITE HELPERS ── */
-async function dbUpsertProject(p){
-  const row={title:p.title,client:p.client,type:p.type,status:p.status,shoot_date:p.shoot,budget:p.budget,location:p.location,drive_link:p.driveLink,tags:p.tags,notes:p.notes,crew_ids:p.crewIds};
-  if(p.id&&p.id<2e13){const{data}=await sb.from("projects").update(row).eq("id",p.id).select().single();return data?mpP(data):p;}
-  const{data}=await sb.from("projects").insert(row).select().single();return data?mpP(data):p;
+async function dbUpsertProject(p) {
+  const row = {
+    title: p.title || "",
+    client: p.client || "",
+    type: p.type || "",
+    status: p.status || "",
+    shoot_date: p.shoot || "",
+    budget: Number(p.budget) || 0,
+    location: p.location || "",
+    drive_link: p.driveLink || "",
+    tags: p.tags || [],
+    notes: p.notes || "",
+    crew_ids: p.crewIds || []
+  };
+
+  // Try update first
+  if (p.id) {
+    const { data: updated, error: updateError } = await sb
+      .from("projects")
+      .update(row)
+      .eq("id", p.id)
+      .select()
+      .single();
+
+    if (!updateError && updated) {
+      return mpP(updated);
+    }
+
+    console.warn("Update failed, trying insert...", updateError);
+  }
+
+  // Insert if update failed or new project
+  const { data: inserted, error: insertError } = await sb
+    .from("projects")
+    .insert(row)
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error("INSERT ERROR:", insertError);
+    return p;
+  }
+
+  return mpP(inserted);
 }
 async function dbUpsertCrew(c){
   const row={name:c.name,role:c.role,phone:c.phone,email:c.email,location:c.location,tags:c.tags,notes:c.notes,project_ids:c.projects};
