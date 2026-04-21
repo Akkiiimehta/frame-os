@@ -65,6 +65,36 @@ async function dbUpsertQuote(q){
 async function dbDelQuote(id){await sb.from("quotes").delete().eq("id",id);}
 async function dbSaveAbout(a){await sb.from("about").upsert({id:1,name:a.name,title:a.title,studio:a.studio,tagline:a.tagline,bio:a.bio,phone:a.phone,email:a.email,website:a.website,services:a.services,instagram:a.instagram,linkedin:a.linkedin,logo_color:a.logoColor});}
 
+/* ── VENDOR MAPPER & DB FUNCTIONS (NEW) ── */
+const mpV=r=>({id:r.id,name:r.name||"",category:r.category||"Camera",contact:r.contact||"",phone:r.phone||"",email:r.email||"",location:r.location||"",rate:r.rate||"",notes:r.notes||""});
+async function dbUpsertVendor(v){
+  const row={name:v.name,category:v.category,contact:v.contact,phone:v.phone,email:v.email,location:v.location,rate:v.rate,notes:v.notes};
+  if(v.id&&v.id<2e13){const{data}=await sb.from("vendors").update(row).eq("id",v.id).select().single();return data?mpV(data):v;}
+  const{data}=await sb.from("vendors").insert(row).select().single();return data?mpV(data):v;
+}
+async function dbDeleteVendor(id){await sb.from("vendors").delete().eq("id",id);}
+
+/* ── EXPORT HELPERS (NEW) ── */
+function exportToCSV(data,filename){
+  if(!data||!data.length){alert("No data to export");return;}
+  const headers=Object.keys(data[0]);
+  const csv=[headers.join(","),...data.map(r=>headers.map(h=>JSON.stringify(r[h]||"")).join(","))].join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=filename+".csv";a.click();
+  URL.revokeObjectURL(url);
+}
+function exportToPDF(title,dataArray){
+  const html=`<html><head><style>body{font-family:Arial,sans-serif;margin:20px;color:#333;}h1{color:#1a2f6e;border-bottom:2px solid #1a2f6e;padding-bottom:10px;}h2{margin-top:30px;color:#1a2f6e;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{border:1px solid #ddd;padding:12px;text-align:left;}th{background:#1a2f6e;color:white;font-weight:bold;}tr:nth-child(even){background:#f9f9f9;}</style></head><body><h1>${title}</h1><p>Generated on ${new Date().toLocaleDateString()}</p>${dataArray.map(({heading,rows})=>{if(!rows||!rows.length)return "";const headers=Object.keys(rows[0]);return`<h2>${heading}</h2><table><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr>${rows.map(r=>`<tr>${headers.map(h=>`<td>${r[h]||""}</td>`).join("")}</tr>`).join("")}</table>`;}).join("")}</body></html>`;
+  const blob=new Blob([html],{type:"text/html"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=`${title.replace(/\s+/g,"_")}.html`;a.click();
+  URL.revokeObjectURL(url);
+}
+
+
 /* ── UI HELPERS ── */
 function LoadingScreen({msg="Loading…"}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}><div style={{width:36,height:36,border:"2px solid rgba(255,255,255,0.1)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/><div style={{fontSize:13,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{msg}</div><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;}
 function ErrScreen({msg}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,padding:24}}><div style={{fontSize:28}}>⚠️</div><div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>Database connection failed</div><div style={{fontSize:13,color:"var(--text3)",textAlign:"center",maxWidth:340}}>{msg}</div><button className="btn-p" onClick={()=>window.location.reload()}>Retry</button></div>;}
@@ -418,13 +448,13 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
 }
 
 /* ── PROJECTS VIEW ── */
-function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl}){
+function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
   const isAdmin=role==="admin";
   const[projects,setProjects,loadingP,errP]=useDB("projects",mpP);
   const[rawInv,,loadingI]=useDB("invoices");
   const[rawPay]=useDB("payments");
   const invoices=rawInv.map(i=>mpI(i,rawPay));
-  const[filter,setFilter]=useState("All");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
+  const[filter,setFilter]=useState("All");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);const[showExport,setShowExport]=useState(false);
   const[form,setForm]=useState({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=filter==="All"?projects:projects.filter(p=>p.status===filter);
@@ -480,7 +510,7 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl}){
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       {["All",...PROJ_ST].map(s=><button key={s} className={`fpill${filter===s?" active":""}`} onClick={()=>setFilter(s)}>{s}</button>)}
-      <div style={{flex:1}}/>{isAdmin&&<button className="btn-p" onClick={()=>setShowAdd(true)}>+ New project</button>}
+      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowExport(true)}>📊 Export</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New project</button></>}
     </div>
     <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,fontFamily:"'Geist Mono',monospace"}}>↗ tap card to view · {isAdmin&&"📋 call sheet inside panel"}</div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
@@ -505,6 +535,7 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl}){
         </div>;
       })}
     </div>
+    {showExport&&<ExportModal onClose={()=>setShowExport(false)} allProjects={projects} allCrew={allCrew} allVendors={allVendors}/>}
     {selP&&<ProjPanel project={selP} invoices={invoices} allCrew={allCrew} onClose={()=>setSelected(null)} onUpdate={upd} onStatusChange={(id,s)=>upd(id,{status:s})} onAddCrew={addCrew} onRemoveCrew={remCrew} role={role} expTrackerUrl={expTrackerUrl}/>}
     {showAdd&&<Modal title="New project" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><Lbl ch="Title"/><Inp value={form.title} onChange={fset("title")} placeholder="Nike AW26 Campaign"/></div>
@@ -656,9 +687,63 @@ function ClientsView({role}){
 }
 
 /* ── CREW VIEW ── */
+/* ── CUSTOM DESIGNATIONS MODAL (NEW) ── */
+function OtherDesignationsModal({onClose}){
+  const[designations,setDesignations]=usePersist("frameOS_customDesignations",["Senior Producer","Product Designer","DOP","Editor","Sound Designer","VFX Artist","Gaffer","Assistant Director"]);
+  const[newDes,setNewDes]=useState("");
+  const add=()=>{if(!newDes.trim()){alert("Enter a designation");return;}if(designations.includes(newDes)){alert("Already exists");return;}setDesignations([...designations,newDes]);setNewDes("");};
+  const remove=(d)=>setDesignations(designations.filter(x=>x!==d));
+  return<Modal title="Manage Crew Designations" onClose={onClose} wide>
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:13,fontSize:13,color:"var(--text2)",lineHeight:1.7}}>Add or remove custom crew roles. These will appear in the crew dropdown when adding team members.</div>
+      <div style={{display:"flex",gap:10}}><input type="text" value={newDes} onChange=e=>setNewDes(e.target.value) placeholder="Enter new designation (e.g., Senior Producer)" style={{flex:1,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/><button className="btn-p" onClick={add}>Add</button></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10,maxHeight:300,overflowY:"auto"}}>{designations.map(d=><div key={d} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:12,display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}><span>{d}</span><button onClick={()=>remove(d)} style={{fontSize:16,color:"var(--text3)",width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer"}}>×</button></div>)}</div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Close</button></div>
+    </div>
+  </Modal>;
+}
+
+/* ── VENDOR MANAGEMENT MODAL (NEW) ── */
+function VendorModal({onClose,vendors,setVendors}){
+  const[edit,setEdit]=useState(null);const[search,setSearch]=useState("");const[categoryFilter,setCategoryFilter]=useState("All");
+  const CATEGORIES=["Camera","Grip","Lighting","Catering","Transport","Locations","Post-Production","Other"];
+  const filtered=vendors.filter(v=>(categoryFilter==="All"||v.category===categoryFilter)&&(v.name.toLowerCase().includes(search.toLowerCase())||v.contact.toLowerCase().includes(search.toLowerCase())));
+  const openAdd=()=>setEdit({id:Date.now(),name:"",category:"Camera",contact:"",phone:"",email:"",location:"",rate:"",notes:""});
+  const openEdit=(v)=>setEdit({...v});
+  const closeEdit=()=>setEdit(null);
+  const save=async()=>{if(!edit.name.trim()){alert("Enter vendor name");return;}if(!edit.phone.trim()&&!edit.email.trim()){alert("Enter phone or email");return;}const updated=edit.id<2e13?vendors.map(v=>v.id===edit.id?edit:v):[...vendors,edit];setVendors(updated);await dbUpsertVendor(edit);closeEdit();};
+  const delete_=async(id)=>{if(!confirm("Delete vendor?"))return;setVendors(vendors.filter(v=>v.id!==id));await dbDeleteVendor(id);};
+  return<Modal title="Manage Vendors" onClose={onClose} wide>
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:180}}><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Search vendors</label><input type="text" value={search} onChange=e=>setSearch(e.target.value) placeholder="Name or contact..." style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div>
+        <div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Category</label><select value={categoryFilter} onChange=e=>setCategoryFilter(e.target.value) style={{border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}><option>All</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+        <button className="btn-p" onClick={openAdd}>+ Add Vendor</button>
+      </div>
+      <div style={{maxHeight:400,overflowY:"auto"}}>{filtered.length===0?<div style={{textAlign:"center",padding:40,color:"var(--text3)",fontSize:13}}>No vendors found</div>:<div style={{display:"grid",gap:10}}>{filtered.map(v=><div key={v.id} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{v.name}</div><div style={{fontSize:12,color:"var(--text2)",marginTop:4}}><div>{v.category} · {v.location}</div>{v.phone&&<div>☎ {v.phone}</div>}{v.email&&<div>✉ {v.email}</div>}{v.rate&&<div>Rate: {v.rate}</div>}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button className="btn-g" onClick={()=>openEdit(v)} style={{padding:"6px 12px"}}>Edit</button><button className="btn-r" onClick={()=>delete_(v.id)} style={{padding:"6px 12px"}}>Delete</button></div></div>)}</div>}</div>
+      {edit&&<Modal title={edit.id<2e13?"Edit Vendor":"Add Vendor"} onClose={closeEdit}><div style={{display:"flex",flexDirection:"column",gap:12}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Vendor Name</label><input type="text" value={edit.name} onChange=v=>setEdit({...edit,name:v}) placeholder="e.g., Sony Rentals" style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Category</label><select value={edit.category} onChange=e=>setEdit({...edit,category:e.target.value}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Contact Person</label><input type="text" value={edit.contact} onChange=v=>setEdit({...edit,contact:v}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Phone</label><input type="text" value={edit.phone} onChange=v=>setEdit({...edit,phone:v}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Email</label><input type="text" value={edit.email} onChange=v=>setEdit({...edit,email:v}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Location</label><input type="text" value={edit.location} onChange=v=>setEdit({...edit,location:v}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Rate/Budget</label><input type="text" value={edit.rate} onChange=v=>setEdit({...edit,rate:v}) style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Notes</label><textarea value={edit.notes} onChange=e=>setEdit({...edit,notes:e.target.value}) placeholder="Additional details..." style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13,minHeight:80}}/></div><div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={closeEdit}>Cancel</button><button className="btn-p" onClick={save}>Save Vendor</button></div></div></Modal>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Close</button></div>
+    </div>
+  </Modal>;
+}
+
+/* ── EXPORT MODAL (NEW) ── */
+function ExportModal({onClose,allProjects,allCrew,allVendors}){
+  const exportAll=(format)=>{
+    const projectData=allProjects.map(p=>({Title:p.title,Client:p.client,Type:p.type,Status:p.status,"Shoot Date":p.shoot,Budget:p.budget,Location:p.location,Notes:p.notes}));
+    const crewData=allCrew.map(c=>({Name:c.name,Role:c.role,Phone:c.phone,Email:c.email,Location:c.location,Notes:c.notes}));
+    const vendorData=allVendors.map(v=>({Name:v.name,Category:v.category,Contact:v.contact,Phone:v.phone,Email:v.email,Location:v.location,Rate:v.rate}));
+    if(format==="pdf"){exportToPDF("Frame OS - Complete Export",[{heading:"Projects",rows:projectData},{heading:"Crew",rows:crewData},{heading:"Vendors",rows:vendorData}]);}
+    else if(format==="csv"){exportToCSV(projectData,"Projects");exportToCSV(crewData,"Crew");exportToCSV(vendorData,"Vendors");}
+  };
+  return<Modal title="Export Data" onClose={onClose}><div style={{display:"flex",flexDirection:"column",gap:14}}><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:13,fontSize:13,color:"var(--text2)",lineHeight:1.7}}>Export all projects, crew, and vendor data in your preferred format.</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10}}><button onClick={()=>exportAll("pdf")} style={{background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:8,padding:16,textAlign:"center",fontSize:13,fontWeight:600,color:"var(--accent)",cursor:"pointer"}}>📄 PDF</button><button onClick={()=>exportAll("csv")} style={{background:"var(--accent-bg)",border:"1px solid var(--accent-bd)",borderRadius:8,padding:16,textAlign:"center",fontSize:13,fontWeight:600,color:"var(--accent)",cursor:"pointer"}}>📊 CSV</button></div><div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Close</button></div></div></Modal>;
+}
+
 function CrewView({allCrew,setAllCrew,projects,role}){
   const isAdmin=role==="admin";
-  const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);
+  const[customDesignations]=usePersist("frameOS_customDesignations",["Senior Producer","Product Designer","DOP","Editor","Sound Designer","VFX Artist","Gaffer","Assistant Director"]);
+  const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);const[showDesignations,setShowDesignations]=useState(false);
+  const allRoleOptions=[...CREW_ROLES,...customDesignations.filter(d=>!CREW_ROLES.includes(d))];
   const[form,setForm]=useState({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=allCrew.filter(c=>(filterR==="All"||c.role===filterR)&&(c.name.toLowerCase().includes(search.toLowerCase())||c.role.toLowerCase().includes(search.toLowerCase())));
   const updM=async(id,patch)=>{
@@ -689,7 +774,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       <Inp value={search} onChange={setSearch} placeholder="Search name or role…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All","Director","DOP","Producer","AD","Editor","Gaffer","Other"].map(r=><button key={r} className={`fpill${filterR===r?" active":""}`} onClick={()=>setFilterR(r)}>{r}</button>)}</div>
-      <div style={{flex:1}}/>{isAdmin&&<button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button>}
+      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {shown.map((c,i)=>{const cP=projects.filter(p=>c.projects.includes(p.id));return <div key={c.id} className="card clickable fade-up" style={{padding:"18px 20px",animationDelay:`${i*45}ms`,position:"relative",overflow:"hidden"}} onClick={()=>setSelected(c.id)}>
@@ -726,7 +811,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
         <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Contact</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div><Lbl ch="Full name"/>{isAdmin?<Inp value={m.name||""} onChange={v=>updM(m.id,{name:v})} placeholder="Full name"/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.name}</div>}</div>
-            <div><Lbl ch="Role"/>{isAdmin?<Sel value={m.role} onChange={v=>updM(m.id,{role:v})} options={CREW_ROLES}/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.role}</div>}</div>
+            <div><Lbl ch="Role"/>{isAdmin?<Sel value={m.role} onChange={v=>updM(m.id,{role:v})} options={allRoleOptions}/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.role}</div>}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div><Lbl ch="Phone"/>{isAdmin?<Inp value={m.phone||""} onChange={v=>updM(m.id,{phone:v})} placeholder="9876543210"/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.phone||"—"}</div>}</div>
               <div><Lbl ch="Email"/>{isAdmin?<Inp value={m.email||""} onChange={v=>updM(m.id,{email:v})} placeholder="name@email.com"/>:<div style={{fontSize:13,color:"var(--text2)"}}>{m.email||"—"}</div>}</div>
@@ -741,13 +826,14 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     })()}
     {isAdmin&&showAdd&&<Modal title="Add crew member" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><Lbl ch="Full name"/><Inp value={form.name} onChange={fset("name")} placeholder="Rahul Verma"/></div>
-      <div><Lbl ch="Role"/><Sel value={form.role} onChange={fset("role")} options={CREW_ROLES}/></div>
+      <div><Lbl ch="Role"/><Sel value={form.role} onChange={fset("role")} options={allRoleOptions}/></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><Lbl ch="Phone"/><Inp value={form.phone} onChange={fset("phone")} placeholder="9876543210"/></div><div><Lbl ch="Email"/><Inp value={form.email} onChange={fset("email")} placeholder="name@email.com"/></div></div>
       <div><Lbl ch="Location"/><Inp value={form.location} onChange={fset("location")} placeholder="Mumbai"/></div>
       <div><Lbl ch="Tags"/><Inp value={form.tags} onChange={fset("tags")} placeholder="arri, studio"/></div>
       <div><Lbl ch="Notes"/><Inp value={form.notes} onChange={fset("notes")} placeholder="Any notes…"/></div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={()=>setShowAdd(false)}>Cancel</button><button className="btn-p" onClick={doAdd}>Add member</button></div>
     </div></Modal>}
+    {showDesignations&&<OtherDesignationsModal onClose={()=>setShowDesignations(false)}/>}
   </div>);
 }
 
@@ -1028,6 +1114,8 @@ export default function App(){
   const[showChgPw,setShowChgPw]=useState(false);
   const[showExpUrl,setShowExpUrl]=useState(false);
   const[allCrew,setAllCrew,loadingCrew]=useDB("crew",mpC);
+  const[allVendors,setAllVendors]=useDB("vendors",mpV);
+  const[showVendors,setShowVendors]=useState(false);
   const isAdmin=role==="admin";const isViewer=role==="viewer";
   const NAV=isAdmin?NAV_A:NAV_V;
   const tryUnlock=pw=>{if(pw===password){sessionStorage.setItem("frameOS_role","admin");setRole("admin");return "admin";}if(pw===viewerPw){sessionStorage.setItem("frameOS_role","viewer");setRole("viewer");return "viewer";}return null;};
@@ -1052,6 +1140,7 @@ export default function App(){
             <span className="hmob" style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
+            {isAdmin&&<button onClick={()=>setShowVendors(true)} title="Manage Vendors" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>🏭</button>}
             {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.25)",borderRadius:9,cursor:"pointer",fontSize:17,textDecoration:"none",flexShrink:0}}>💲</a>}
             {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>💲</button>}
             <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>{theme==="dark"?"☀️":"🌙"}</button>
@@ -1060,7 +1149,7 @@ export default function App(){
           </div>
         </header>
         <main style={{flex:1,padding:"26px 28px",minWidth:0,overflow:"hidden"}}>
-          {safeTab==="projects"&&<ProjectsView allCrew={allCrew} setAllCrew={setAllCrew} role={role} expTrackerUrl={expUrl}/>}
+          {safeTab==="projects"&&<ProjectsView allCrew={allCrew} setAllCrew={setAllCrew} role={role} expTrackerUrl={expUrl} allVendors={allVendors}/>}
           {safeTab==="finance"&&isAdmin&&<FinanceView/>}
           {safeTab==="clients"&&<ClientsView role={role}/>}
           {safeTab==="crew"&&<CrewView allCrew={allCrew} setAllCrew={setAllCrew} projects={[]} role={role}/>}
@@ -1074,12 +1163,13 @@ export default function App(){
           </button>)}
         </nav>
         <footer style={{borderTop:"1px solid var(--border)",padding:"12px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.1 · {isAdmin?"Synced with Supabase":"View only"}</span>
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.2 · {isAdmin?"Synced with Supabase":"View only"}</span>
           {isAdmin&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>Default: frame2026 / view2026</span>}
         </footer>
       </div>
     </div>
     {showChgPw&&<ChangePassModal onClose={()=>setShowChgPw(false)} onSave={handleChgAdmin} viewerPassword={viewerPw} onSaveViewer={handleChgViewer}/>}
+    {showVendors&&<VendorModal onClose={()=>setShowVendors(false)} vendors={allVendors} setVendors={setAllVendors}/>}
     {showExpUrl&&<Modal title="Link Expense Tracker" onClose={()=>setShowExpUrl(false)}>
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:13,fontSize:13,color:"var(--text2)",lineHeight:1.7}}>Paste the URL of your Expense Tracker HTML file (hosted on Netlify or opened locally). This enables the 💰 Expenses button in the header and auto-matches project expenses by client name.</div>
