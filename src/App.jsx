@@ -83,10 +83,43 @@ async function dbUpsertProject(p) {
 
   return mpP(inserted);
 }
-async function dbUpsertCrew(c){
-  const row={name:c.name,role:c.role,phone:c.phone,email:c.email,location:c.location,tags:c.tags,notes:c.notes,project_ids:c.projects};
-  if(c.id&&c.id<2e13){const{data}=await sb.from("crew").update(row).eq("id",c.id).select();return data?mpC(data):c;}
-  const{data}=await sb.from("crew").insert(row).select();return data?mpC(data):c;
+async function dbUpsertCrew(c) {
+  const row = {
+    name: c.name || "",
+    role: c.role || "",
+    phone: c.phone || "",
+    email: c.email || "",
+    location: c.location || "",
+    tags: c.tags || [],
+    notes: c.notes || "",
+    project_ids: c.projects || []
+  };
+
+  // try update
+  if (c.id) {
+    const { data: updated, error } = await sb
+      .from("crew")
+      .update(row)
+      .eq("id", c.id)
+      .select();
+
+    if (!error && updated && updated.length > 0) {
+      return updated[0];
+    }
+  }
+
+  // fallback insert
+  const { data: inserted, error } = await sb
+    .from("crew")
+    .insert(row)
+    .select();
+
+  if (error) {
+    console.error("CREW INSERT ERROR:", error);
+    return c;
+  }
+
+  return inserted[0];
 }
 async function dbDeleteCrew(id){await sb.from("crew").delete().eq("id",id);}
 async function dbUpsertInvoice(inv){
