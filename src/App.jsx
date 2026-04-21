@@ -40,6 +40,7 @@ function useDB(table,mapper){
 
 /* ── DB WRITE HELPERS ── */
 async function dbUpsertProject(p) {
+  console.log("NEW UPSERT RUNNING");
   const row = {
     title: p.title || "",
     client: p.client || "",
