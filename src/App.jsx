@@ -61,8 +61,7 @@ async function dbUpsertProject(p) {
       .from("projects")
       .update(row)
       .eq("id", p.id)
-      .select()
-      .single();
+      .select();
 
     if (!updateError && updated) {
       return mpP(updated);
@@ -75,8 +74,7 @@ async function dbUpsertProject(p) {
   const { data: inserted, error: insertError } = await sb
     .from("projects")
     .insert(row)
-    .select()
-    .single();
+    .select();
 
   if (insertError) {
     console.error("INSERT ERROR:", insertError);
@@ -87,21 +85,21 @@ async function dbUpsertProject(p) {
 }
 async function dbUpsertCrew(c){
   const row={name:c.name,role:c.role,phone:c.phone,email:c.email,location:c.location,tags:c.tags,notes:c.notes,project_ids:c.projects};
-  if(c.id&&c.id<2e13){const{data}=await sb.from("crew").update(row).eq("id",c.id).select().single();return data?mpC(data):c;}
-  const{data}=await sb.from("crew").insert(row).select().single();return data?mpC(data):c;
+  if(c.id&&c.id<2e13){const{data}=await sb.from("crew").update(row).eq("id",c.id).select();return data?mpC(data):c;}
+  const{data}=await sb.from("crew").insert(row).select();return data?mpC(data):c;
 }
 async function dbDeleteCrew(id){await sb.from("crew").delete().eq("id",id);}
 async function dbUpsertInvoice(inv){
   const row={invoice_no:inv.invoiceNo,project:inv.project,client:inv.client,amount:inv.amount,status:inv.status,due_date:inv.due};
   if(inv.id&&inv.id<2e13){await sb.from("invoices").update(row).eq("id",inv.id);return inv.id;}
-  const{data}=await sb.from("invoices").insert(row).select().single();return data?.id;
+  const{data}=await sb.from("invoices").insert(row).select();return data?.id;
 }
-async function dbAddPayment(invId,p){const{data}=await sb.from("payments").insert({invoice_id:invId,amount:p.amount,date:p.date,note:p.note}).select().single();return data;}
+async function dbAddPayment(invId,p){const{data}=await sb.from("payments").insert({invoice_id:invId,amount:p.amount,date:p.date,note:p.note}).select();return data;}
 async function dbDelPayment(id){await sb.from("payments").delete().eq("id",id);}
 async function dbUpsertQuote(q){
   const row={title:q.title,client:q.client,project:q.project,status:q.status,tax_pct:q.taxPct,valid_until:q.validUntil,notes:q.notes,lines:q.lines,created_at:q.createdAt};
   if(q.id&&q.id<2e13){await sb.from("quotes").update(row).eq("id",q.id);return q.id;}
-  const{data}=await sb.from("quotes").insert(row).select().single();return data?.id;
+  const{data}=await sb.from("quotes").insert(row).select();return data?.id;
 }
 async function dbDelQuote(id){await sb.from("quotes").delete().eq("id",id);}
 async function dbSaveAbout(a){await sb.from("about").upsert({id:1,name:a.name,title:a.title,studio:a.studio,tagline:a.tagline,bio:a.bio,phone:a.phone,email:a.email,website:a.website,services:a.services,instagram:a.instagram,linkedin:a.linkedin,logo_color:a.logoColor});}
@@ -110,8 +108,8 @@ async function dbSaveAbout(a){await sb.from("about").upsert({id:1,name:a.name,ti
 const mpV=r=>({id:r.id,name:r.name||"",category:r.category||"Camera",contact:r.contact||"",phone:r.phone||"",email:r.email||"",location:r.location||"",rate:r.rate||"",notes:r.notes||""});
 async function dbUpsertVendor(v){
   const row={name:v.name,category:v.category,contact:v.contact,phone:v.phone,email:v.email,location:v.location,rate:v.rate,notes:v.notes};
-  if(v.id&&v.id<2e13){const{data}=await sb.from("vendors").update(row).eq("id",v.id).select().single();return data?mpV(data):v;}
-  const{data}=await sb.from("vendors").insert(row).select().single();return data?mpV(data):v;
+  if(v.id&&v.id<2e13){const{data}=await sb.from("vendors").update(row).eq("id",v.id).select();return data?mpV(data):v;}
+  const{data}=await sb.from("vendors").insert(row).select();return data?mpV(data):v;
 }
 async function dbDeleteVendor(id){await sb.from("vendors").delete().eq("id",id);}
 
