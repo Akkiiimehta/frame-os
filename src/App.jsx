@@ -39,77 +39,24 @@ function useDB(table,mapper){
 }
 
 /* ── DB WRITE HELPERS ── */
-async function dbUpsertProject(p) {
-  console.log("NEW UPSERT RUNNING");
-  const row = {
-    title: p.title || "",
-    client: p.client || "",
-    type: p.type || "",
-    status: p.status || "",
-    shoot_date: p.shoot || "",
-    budget: Number(p.budget) || 0,
-    location: p.location || "",
-    drive_link: p.driveLink || "",
-    tags: p.tags || [],
-    notes: p.notes || "",
-    crew_ids: p.crewIds || []
-  };
-
-  // Try update first
-  if (p.id) {
-    const { data: updated, error: updateError } = await sb
-      .from("projects")
-      .update(row)
-      .eq("id", p.id)
-      .select();
-
-    if (!updateError && updated) {
-      return mpP(updated);
-    }
-
-    console.warn("Update failed, trying insert...", updateError);
-  }
-
-  // Insert if update failed or new project
-  const { data: inserted, error: insertError } = await sb
-    .from("projects")
-    .insert(row)
-    .select();
-
-  if (insertError) {
-    console.error("INSERT ERROR:", insertError);
-    return p;
-  }
-
-  return mpP(inserted);
-}
 async function dbUpsertCrew(c) {
+  console.log("CREW UPSERT RUNNING", c);
+
   const row = {
     name: c.name || "",
     role: c.role || "",
     phone: c.phone || "",
     email: c.email || "",
     location: c.location || "",
-    tags: c.tags || [],
+    tags: Array.isArray(c.tags) ? c.tags : [],
     notes: c.notes || "",
-    project_ids: c.projects || []
+    project_ids: Array.isArray(c.projects)
+      ? c.projects.map(Number)
+      : []
   };
 
-  // try update
-  if (c.id) {
-    const { data: updated, error } = await sb
-      .from("crew")
-      .update(row)
-      .eq("id", c.id)
-      .select();
-
-    if (!error && updated && updated.length > 0) {
-      return updated[0];
-    }
-  }
-
-  // fallback insert
-  const { data: inserted, error } = await sb
+  // 👉 ALWAYS INSERT (for now — keep it simple)
+  const { data, error } = await sb
     .from("crew")
     .insert(row)
     .select();
@@ -119,7 +66,7 @@ async function dbUpsertCrew(c) {
     return c;
   }
 
-  return inserted[0];
+  return data[0];
 }
 async function dbDeleteCrew(id){await sb.from("crew").delete().eq("id",id);}
 async function dbUpsertInvoice(inv){
