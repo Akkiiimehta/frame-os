@@ -40,22 +40,33 @@ function useDB(table,mapper){
 
 /* ── DB WRITE HELPERS ── */
 async function dbUpsertCrew(c) {
-  console.log("CREW UPSERT RUNNING", c);
-
   const row = {
     name: c.name || "",
-    role: c.role || "",
+    role: c.role || "Other",
     phone: c.phone || "",
     email: c.email || "",
     location: c.location || "",
     tags: Array.isArray(c.tags) ? c.tags : [],
     notes: c.notes || "",
-    project_ids: Array.isArray(c.projects)
-      ? c.projects.map(Number)
-      : []
+    project_ids: Array.isArray(c.projects) ? c.projects.map(Number) : []
   };
 
-  // 👉 ALWAYS INSERT (for now — keep it simple)
+  // ✅ FIX: update if exists
+  if (c.id && c.id < 2e13) {
+    const { data, error } = await sb
+      .from("crew")
+      .update(row)
+      .eq("id", c.id)
+      .select();
+
+    if (error) {
+      console.error("CREW UPDATE ERROR:", error);
+      return c;
+    }
+    return data[0];
+  }
+
+  // ✅ insert new
   const { data, error } = await sb
     .from("crew")
     .insert(row)
@@ -69,11 +80,59 @@ async function dbUpsertCrew(c) {
   return data[0];
 }
 async function dbDeleteCrew(id){await sb.from("crew").delete().eq("id",id);}
+async function dbUpsertProject(p) {
+  const row = {
+    title: p.title || "",
+    client: p.client || "",
+    type: p.type || "TVC",
+    status: p.status || "Pre-Production",
+    shoot_date: p.shoot || "",
+    budget: Number(p.budget) || 0,
+    location: p.location || "",
+    drive_link: p.driveLink || "",
+    tags: p.tags || [],
+    notes: p.notes || "",
+    crew_ids: (p.crewIds || []).map(Number)
+  };
+
+  if (p.id && p.id < 2e13) {
+    const { data, error } = await sb
+      .from("projects")
+      .update(row)
+      .eq("id", p.id)
+      .select();
+
+    if (error) {
+      console.error(error);
+      return p;
+    }
+    return data[0];
+  }
+
+  const { data, error } = await sb
+    .from("projects")
+    .insert(row)
+    .select();
+
+  if (error) {
+    console.error(error);
+    return p;
+  }
+
+  return data[0];
+}
+
+async function dbDeleteProject(id) {
+  const { error } = await sb.from("projects").delete().eq("id", id);
+  if (error) console.error(error);
+}
+
 async function dbUpsertInvoice(inv){
   const row={invoice_no:inv.invoiceNo,project:inv.project,client:inv.client,amount:inv.amount,status:inv.status,due_date:inv.due};
   if(inv.id&&inv.id<2e13){await sb.from("invoices").update(row).eq("id",inv.id);return inv.id;}
   const{data}=await sb.from("invoices").insert(row).select();return data?.id;
 }
+
 async function dbAddPayment(invId,p){const{data}=await sb.from("payments").insert({invoice_id:invId,amount:p.amount,date:p.date,note:p.note}).select();return data;}
 async function dbDelPayment(id){await sb.from("payments").delete().eq("id",id);}
 async function dbUpsertQuote(q){
@@ -485,49 +544,160 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=filter==="All"?projects:projects.filter(p=>p.status===filter);
   const totalBudget=projects.reduce((s,p)=>s+p.budget,0);
-  const upd=async(id,patch)=>{
-    if(!isAdmin)return;
-    const p=projects.find(x=>x.id===id);if(!p)return;
-    const next={...p,...patch};
-    setProjects(ps=>ps.map(x=>x.id===id?next:x));
-    await dbUpsertProject(next);
-  };
-  const addCrew=async(pid,cid,isNew)=>{
-    const proj=projects.find(p=>p.id===pid);if(!proj)return;
-    if(isNew){
-      const saved=await dbUpsertCrew({...cid,projects:[pid]});
-      setAllCrew(c=>[...c,saved]);
-      const next={...proj,crewIds:[...proj.crewIds,saved.id]};
-      setProjects(ps=>ps.map(p=>p.id===pid?next:p));
-      await dbUpsertProject(next);
-    } else {
-      const next={...proj,crewIds:[...proj.crewIds,cid]};
-      setProjects(ps=>ps.map(p=>p.id===pid?next:p));
-      await dbUpsertProject(next);
-      const cm=allCrew.find(m=>m.id===cid);
-      if(cm){const cu={...cm,projects:[...cm.projects,pid]};setAllCrew(c=>c.map(m=>m.id===cid?cu:m));await dbUpsertCrew(cu);}
+const upd = async (id, patch) => {
+  if (!isAdmin) return;
+
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+
+  const next = { ...p, ...patch };
+
+  const saved = await dbUpsertProject(next);
+  if (!saved) return;
+
+  setProjects(ps =>
+    ps.map(x => x.id === id ? mpP(saved) : x)
+  );
+};
+
+
+const addCrew = async (pid, cid, isNew) => {
+  const proj = projects.find(p => p.id === pid);
+  if (!proj) return;
+
+  if (isNew) {
+    const saved = await dbUpsertCrew({ ...cid, projects: [pid] });
+    if (!saved) return;
+
+    // ✅ FIX: no duplication
+    setAllCrew(c => {
+      const exists = c.find(x => x.id === saved.id);
+      if (exists) return c.map(x => x.id === saved.id ? saved : x);
+      return [...c, saved];
+    });
+
+    const next = {
+      ...proj,
+      crewIds: proj.crewIds.includes(saved.id)
+        ? proj.crewIds
+        : [...proj.crewIds, saved.id]
+    };
+
+    const updated = await dbUpsertProject(next);
+    if (!updated) return;
+
+    setProjects(ps =>
+      ps.map(p => p.id === pid ? mpP(updated) : p)
+    );
+
+  } else {
+    const next = {
+      ...proj,
+      crewIds: proj.crewIds.includes(cid)
+        ? proj.crewIds
+        : [...proj.crewIds, cid]
+    };
+
+    const updated = await dbUpsertProject(next);
+    if (!updated) return;
+
+    setProjects(ps =>
+      ps.map(p => p.id === pid ? mpP(updated) : p)
+    );
+
+    const cm = allCrew.find(m => m.id === cid);
+    if (cm) {
+      const cu = {
+        ...cm,
+        projects: cm.projects.includes(pid)
+          ? cm.projects
+          : [...cm.projects, pid]
+      };
+
+      const savedCrew = await dbUpsertCrew(cu);
+      if (!savedCrew) return;
+
+      setAllCrew(c =>
+        c.map(m => m.id === cid ? savedCrew : m)
+      );
     }
+  }
+};
+
+
+const remCrew = async (pid, cid) => {
+  const proj = projects.find(p => p.id === pid);
+  if (!proj) return;
+
+  const next = {
+    ...proj,
+    crewIds: proj.crewIds.filter(x => x !== cid)
   };
-  const remCrew=async(pid,cid)=>{
-    const proj=projects.find(p=>p.id===pid);if(!proj)return;
-    const next={...proj,crewIds:proj.crewIds.filter(x=>x!==cid)};
-    setProjects(ps=>ps.map(p=>p.id===pid?next:p));
-    await dbUpsertProject(next);
-    const cm=allCrew.find(m=>m.id===cid);
-    if(cm){const cu={...cm,projects:cm.projects.filter(x=>x!==pid)};setAllCrew(c=>c.map(m=>m.id===cid?cu:m));await dbUpsertCrew(cu);}
-  };
-  const doAdd=async()=>{
-    if(!form.title.trim()||!form.client.trim())return;
-    const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
-    const saved=await dbUpsertProject({...form,crewIds:[],budget:Number(form.budget)||0,tags,id:Date.now()});
-    setProjects(ps=>[...ps,saved]);
-    setForm({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
-    setShowAdd(false);
-  };
-  const selP=selected?projects.find(p=>p.id===selected.id):null;
-  if(loadingP)return <LoadingScreen msg="Loading projects…"/>;
-  if(errP)return <ErrScreen msg={errP}/>;
-  return(<div>
+
+  const updated = await dbUpsertProject(next);
+  if (!updated) return;
+
+  setProjects(ps =>
+    ps.map(p => p.id === pid ? mpP(updated) : p)
+  );
+
+  const cm = allCrew.find(m => m.id === cid);
+  if (cm) {
+    const cu = {
+      ...cm,
+      projects: cm.projects.filter(x => x !== pid)
+    };
+
+    const savedCrew = await dbUpsertCrew(cu);
+    if (!savedCrew) return;
+
+    setAllCrew(c =>
+      c.map(m => m.id === cid ? savedCrew : m)
+    );
+  }
+};
+
+
+const doAdd = async () => {
+  if (!form.title.trim() || !form.client.trim()) return;
+
+  const tags = form.tags
+    .split(",")
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  // ❗ IMPORTANT: REMOVE fake id
+  const saved = await dbUpsertProject({
+    ...form,
+    crewIds: [],
+    budget: Number(form.budget) || 0,
+    tags
+  });
+
+  if (!saved) return;
+
+  // ✅ FIX: prevent duplicate insert
+  setProjects(ps => {
+    const exists = ps.find(x => x.id === saved.id);
+    if (exists) return ps.map(x => x.id === saved.id ? mpP(saved) : x);
+    return [...ps, mpP(saved)];
+  });
+
+  setForm({
+    title: "",
+    client: "",
+    type: "TVC",
+    status: "Pre-Production",
+    shoot: "",
+    budget: "",
+    driveLink: "",
+    location: "",
+    tags: "",
+    notes: ""
+  });
+
+  setShowAdd(false);
+};
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
       <SC2 label="Projects" value={projects.length} color="var(--text)" icon="🎬" delay={0}/>
       <SC2 label="Active" value={projects.filter(p=>p.status==="In Production").length} color="var(--accent)" icon="🎥" delay={50}/>
