@@ -555,7 +555,10 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
     await dbDeleteProject(id);
   };
   const doAdd=async()=>{
-    if(!form.title.trim()||!form.client.trim())return;
+if(!form.title.trim() || !form.client.trim()){
+  alert("Please enter Title and Client");
+  return;
+}
     const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
     const saved=await dbUpsertProject({...form,crewIds:[],budget:Number(form.budget)||0,tags});
     setProjects(ps=>[...ps,saved]);
