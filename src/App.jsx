@@ -84,10 +84,21 @@ async function dbSaveAbout(a){await supabase.from("about").upsert({id:1,name:a.n
 const mpV=r=>({id:r.id,name:r.name||"",category:r.category||"Camera",contact:r.contact||"",phone:r.phone||"",email:r.email||"",location:r.location||"",rate:r.rate||"",notes:r.notes||""});
 async function dbUpsertVendor(v){
   const row={name:v.name,category:v.category,contact:v.contact,phone:v.phone,email:v.email,location:v.location,rate:v.rate,notes:v.notes};
-  if(v.id&&v.id<2e13){const{data}=await supabase.from("vendors").update(row).eq("id",v.id).select();return data?mpV(data):v;}
-  const{data}=await supabase.from("vendors").insert(row).select();return data?mpV(data):v;
+if(v.id&&v.id<2e13){const{data}=await supabase.from("vendors").update(row).eq("id",v.id).select();return data&&data[0]?mpV(data[0]):v;}
+const{data}=await supabase.from("vendors").insert(row).select();return data&&data[0]?mpV(data[0]):v;
 }
 async function dbDeleteVendor(id){await supabase.from("vendors").delete().eq("id",id);}
+async function dbDeleteProject(id){await supabase.from("projects").delete().eq("id",id);}
+
+/* ── ARTIST MAPPER & DB ── */
+const mpArtist=r=>({id:r.id,name:r.name||"",category:r.category||"Singer",phone:r.phone||"",email:r.email||"",location:r.location||"",rate:r.rate||"",notes:r.notes||"",link:r.link||""});
+async function dbUpsertArtist(a){
+  const row={name:a.name||"",category:a.category||"Singer",phone:a.phone||"",email:a.email||"",location:a.location||"",rate:a.rate||"",notes:a.notes||"",link:a.link||""};
+  if(a.id&&a.id<2e13){const{data}=await supabase.from("artists").update(row).eq("id",a.id).select();return data&&data[0]?mpArtist(data[0]):a;}
+  const{data}=await supabase.from("artists").insert(row).select();return data&&data[0]?mpArtist(data[0]):a;
+}
+async function dbDeleteArtist(id){await supabase.from("artists").delete().eq("id",id);}
+
 
 /* ── EXPORT HELPERS (NEW) ── */
 function exportToCSV(data,filename){
@@ -512,6 +523,13 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
     const cm=allCrew.find(m=>m.id===cid);
     if(cm){const cu={...cm,projects:cm.projects.filter(x=>x!==pid)};setAllCrew(c=>c.map(m=>m.id===cid?cu:m));await dbUpsertCrew(cu);}
   };
+  const delP=async(id)=>{
+  if(!window.confirm("Delete this project? This cannot be undone."))return;
+  setProjects(ps=>ps.filter(p=>p.id!==id));
+  if(selected&&selected.id===id)setSelected(null);
+  await dbDeleteProject(id);
+};
+const doAdd=async()=>{
   const doAdd=async()=>{
     if(!form.title.trim()||!form.client.trim())return;
     const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
@@ -532,6 +550,7 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       {["All",...PROJ_ST].map(s=><button key={s} className={`fpill${filter===s?" active":""}`} onClick={()=>setFilter(s)}>{s}</button>)}
+      
       <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowExport(true)}>📊 Export</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New project</button></>}
     </div>
     <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,fontFamily:"'Geist Mono',monospace"}}>↗ tap card to view · {isAdmin&&"📋 call sheet inside panel"}</div>
@@ -541,8 +560,11 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
         return <div key={p.id} className="card clickable fade-up" style={{padding:"20px 22px",animationDelay:`${i*55}ms`,position:"relative",overflow:"hidden"}} onClick={()=>setSelected(p)}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${sc2.dot}55,transparent)`}}/>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10}}>
-            <div style={{minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{p.client}</div></div>
-            <Badge status={p.status}/>
+         <div style={{minWidth:0}}><div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{p.client}</div></div>
+<div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+  <Badge status={p.status}/>
+  {isAdmin&&<button onClick={e=>{e.stopPropagation();delP(p.id);}} title="Delete project" style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",width:22,height:22,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>}
+</div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,paddingBottom:12,borderBottom:"1px solid var(--border)",marginBottom:12}}>
             {[["TYPE",p.type],["SHOOT",p.shoot||"TBD"]].map(([k,v])=><div key={k}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginBottom:3}}>{k}</div><div style={{fontSize:13,color:"var(--text2)"}}>{v}</div></div>)}
@@ -743,11 +765,53 @@ function VendorModal({onClose,vendors,setVendors}){
         <button className="btn-p" onClick={openAdd}>+ Add Vendor</button>
       </div>
       <div style={{maxHeight:400,overflowY:"auto"}}>{filtered.length===0?<div style={{textAlign:"center",padding:40,color:"var(--text3)",fontSize:13}}>No vendors found</div>:<div style={{display:"grid",gap:10}}>{filtered.map(v=><div key={v.id} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9,padding:14,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{v.name}</div><div style={{fontSize:12,color:"var(--text2)",marginTop:4}}><div>{v.category} · {v.location}</div>{v.phone&&<div>☎ {v.phone}</div>}{v.email&&<div>✉ {v.email}</div>}{v.rate&&<div>Rate: {v.rate}</div>}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button className="btn-g" onClick={()=>openEdit(v)} style={{padding:"6px 12px"}}>Edit</button><button className="btn-r" onClick={()=>delete_(v.id)} style={{padding:"6px 12px"}}>Delete</button></div></div>)}</div>}</div>
-      {edit&&<Modal title={edit.id<2e13?"Edit Vendor":"Add Vendor"} onClose={closeEdit}><div style={{display:"flex",flexDirection:"column",gap:12}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Vendor Name</label><input type="text" value={edit.name} onChange={(v)=>setEdit({...edit,name:v})} placeholder="e.g., Sony Rentals" style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Category</label><select value={edit.category} onChange={(e)=>setEdit({...edit,category:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}<option>Custom</option></select>{edit.category==="Custom"&&<input type="text" value={edit.customCategory||""} onChange={(e)=>setEdit({...edit,customCategory:e.target.value,category:e.target.value})} placeholder="Enter custom category" style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13,marginTop:8}}/>}</div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Contact Person</label><input type="text" value={edit.contact} onChange={(v)=>setEdit({...edit,contact:v})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Phone</label><input type="text" value={edit.phone} onChange={(v)=>setEdit({...edit,phone:v})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Email</label><input type="text" value={edit.email} onChange={(v)=>setEdit({...edit,email:v})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Location</label><input type="text" value={edit.location} onChange={(v)=>setEdit({...edit,location:v})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Rate/Budget</label><input type="text" value={edit.rate} onChange={(v)=>setEdit({...edit,rate:v})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/></div></div><div><label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Notes</label><textarea value={edit.notes} onChange={(e)=>setEdit({...edit,notes:e.target.value})} placeholder="Additional details..." style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13,minHeight:80}}/></div><div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={closeEdit}>Cancel</button><button className="btn-p" onClick={save}>Save Vendor</button></div></div></Modal>}
-      <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={onClose}>Close</button></div>
+{edit&&<Modal title={edit.id<2e13?"Edit Vendor":"Add Vendor"} onClose={closeEdit}>
+  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+    <div>
+      <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Vendor Name</label>
+      <input type="text" value={edit.name??""} onChange={(e)=>setEdit({...edit,name:e.target.value})} placeholder="e.g., Sony Rentals" style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
     </div>
-  </Modal>;
-}
+    <div>
+      <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Category</label>
+      <select value={edit.category??""} onChange={(e)=>setEdit({...edit,category:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}>
+        {CATEGORIES.map(c=><option key={c}>{c}</option>)}<option>Custom</option>
+      </select>
+      {edit.category==="Custom"&&<input type="text" value={edit.customCategory??""} onChange={(e)=>setEdit({...edit,customCategory:e.target.value,category:e.target.value})} placeholder="Enter custom category" style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13,marginTop:8}}/>}
+    </div>
+    <div>
+      <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Contact Person</label>
+      <input type="text" value={edit.contact??""} onChange={(e)=>setEdit({...edit,contact:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <div>
+        <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Phone</label>
+        <input type="text" value={edit.phone??""} onChange={(e)=>setEdit({...edit,phone:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
+      </div>
+      <div>
+        <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Email</label>
+        <input type="text" value={edit.email??""} onChange={(e)=>setEdit({...edit,email:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <div>
+        <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Location</label>
+        <input type="text" value={edit.location??""} onChange={(e)=>setEdit({...edit,location:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
+      </div>
+      <div>
+        <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Rate/Budget</label>
+        <input type="text" value={edit.rate??""} onChange={(e)=>setEdit({...edit,rate:e.target.value})} style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13}}/>
+      </div>
+    </div>
+    <div>
+      <label style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>Notes</label>
+      <textarea value={edit.notes??""} onChange={(e)=>setEdit({...edit,notes:e.target.value})} placeholder="Additional details..." style={{width:"100%",border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",borderRadius:6,padding:"9px 12px",fontSize:13,minHeight:80}}/>
+    </div>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}>
+      <button className="btn-g" onClick={closeEdit}>Cancel</button>
+      <button className="btn-p" onClick={save}>Save Vendor</button>
+    </div>
+  </div>
+</Modal>}
 
 /* ── EXPORT MODAL (NEW) ── */
 function ExportModal({onClose,allProjects,allCrew,allVendors}){
@@ -957,10 +1021,8 @@ function QuotesView({projects}){
 
 
 /* ── NAV ARRAYS ── */
-const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
-const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
-
-/* ── SIDEBAR ── */
+const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
   const isAdmin=role==="admin";const W=collapsed?60:220;const NAV=isAdmin?NAV_A:NAV_V;
   const[editName,setEditName]=useState(false);const[draft,setDraft]=useState(studioName);const nameRef=useRef();
@@ -1119,6 +1181,105 @@ function ChangePassModal({onClose,onSave,viewerPassword,onSaveViewer}){
     {tab==="viewer"&&<div style={{display:"flex",flexDirection:"column",gap:13}}><div style={{background:"var(--green-bg)",border:"1px solid rgba(48,209,88,.2)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>Viewer password — read-only access.</div><div><Lbl ch="Current viewer password"/><Inp type="password" value={vcur} onChange={setVcur} placeholder="••••••••"/></div><div><Lbl ch="New password"/><Inp type="password" value={vnext} onChange={setVnext} placeholder="••••••••"/></div><div><Lbl ch="Confirm"/><Inp type="password" value={vconf} onChange={setVconf} placeholder="••••••••"/></div>{verr&&<div style={{fontSize:12,color:"var(--red)",background:"var(--red-bg)",borderRadius:8,padding:"8px 12px"}}>{verr}</div>}<div style={{display:"flex",justifyContent:"flex-end",gap:10}}><button className="btn-g" onClick={onClose}>Cancel</button><button className="btn-p" onClick={saveV}>Update viewer</button></div></div>}
   </Modal>);
 }
+    /* ── ARTISTS VIEW ── */
+const ARTIST_CATS=["Singer","Dancer","Actor","Musician","Comedian","DJ","Model","Influencer","Voice Artist","Photographer","Other"];
+function ArtistsView({role}){
+  const isAdmin=role==="admin";
+  const[allArtists,setAllArtists]=useDB("artists",mpArtist);
+  const[filterCat,setFilterCat]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[editArtist,setEditArtist]=useState(null);
+  const[form,setForm]=useState({name:"",category:"Singer",phone:"",email:"",location:"",rate:"",notes:"",link:""});
+  const fset=k=>v=>setForm(f=>({...f,[k]:v}));
+  const shown=allArtists.filter(a=>(filterCat==="All"||a.category===filterCat)&&(a.name.toLowerCase().includes(search.toLowerCase())||a.category.toLowerCase().includes(search.toLowerCase())));
+  const doAdd=async()=>{
+    if(!form.name.trim()){alert("Enter artist name");return;}
+    const saved=await dbUpsertArtist({...form,id:Date.now()});
+    setAllArtists(a=>[...a,saved]);
+    setForm({name:"",category:"Singer",phone:"",email:"",location:"",rate:"",notes:"",link:""});
+    setShowAdd(false);
+  };
+  const doEdit=async()=>{
+    if(!editArtist.name.trim()){alert("Enter artist name");return;}
+    const saved=await dbUpsertArtist(editArtist);
+    setAllArtists(a=>a.map(x=>x.id===saved.id?saved:x));
+    setEditArtist(null);
+  };
+  const doDelete=async(id)=>{
+    if(!window.confirm("Delete this artist?"))return;
+    setAllArtists(a=>a.filter(x=>x.id!==id));
+    await dbDeleteArtist(id);
+  };
+  return(<div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎤" delay={0}/>
+      {[["Singers","Singer","var(--purple)","🎵"],["Actors","Actor","var(--accent)","🎭"],["Models","Model","var(--teal)","📸"]].map(([l,cat,c,ic])=><SC2 key={l} label={l} value={allArtists.filter(a=>a.category===cat).length} color={c} icon={ic} delay={50}/>)}
+    </div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
+      <Inp value={search} onChange={setSearch} placeholder="Search artist…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All",...ARTIST_CATS].map(c=><button key={c} className={`fpill${filterCat===c?" active":""}`} onClick={()=>setFilterCat(c)}>{c}</button>)}</div>
+      <div style={{flex:1}}/>{isAdmin&&<button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add artist</button>}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
+      {shown.map((a,i)=><div key={a.id} className="card fade-up" style={{padding:"18px 20px",animationDelay:`${i*45}ms`,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"var(--purple)44"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:12}}>
+          <Av name={a.name} idx={i} size={38}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:600,color:"var(--text)",marginBottom:4}}>{a.name}</div>
+            <span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"var(--purple-bg)",color:"var(--purple)",border:"1px solid rgba(191,90,242,.2)",borderRadius:20,padding:"2px 9px"}}>{a.category}</span>
+          </div>
+          {isAdmin&&<div style={{display:"flex",gap:6,flexShrink:0}}>
+            <button className="btn-g" style={{padding:"5px 10px",fontSize:12}} onClick={()=>setEditArtist({...a})}>Edit</button>
+            <button style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",padding:"5px 10px",borderRadius:9,cursor:"pointer",fontSize:12}} onClick={()=>doDelete(a.id)}>Delete</button>
+          </div>}
+        </div>
+        <div style={{fontSize:12,color:"var(--text2)",display:"flex",flexDirection:"column",gap:4}}>
+          {a.location&&<div>📍 {a.location}</div>}
+          {a.phone&&<div>📞 <span style={{fontFamily:"'Geist Mono',monospace"}}>{a.phone}</span></div>}
+          {a.email&&<div>✉ {a.email}</div>}
+          {a.rate&&<div style={{color:"var(--green)",fontFamily:"'Geist Mono',monospace"}}>Rate: {a.rate}</div>}
+          {a.link&&<div><a href={a.link.startsWith("http")?a.link:"https://"+a.link} target="_blank" rel="noopener noreferrer" style={{color:"var(--accent)",textDecoration:"none",fontSize:12}}>🔗 Portfolio / Link</a></div>}
+        </div>
+        {a.notes&&<div style={{marginTop:10,fontSize:12,color:"var(--text3)",background:"var(--bg3)",borderRadius:8,padding:"8px 10px"}}>{a.notes}</div>}
+      </div>)}
+    </div>
+    {/* Add Modal */}
+    {showAdd&&<Modal title="Add Artist" onClose={()=>setShowAdd(false)}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div><Lbl ch="Name"/><Inp value={form.name??""} onChange={fset("name")} placeholder="Shreya Ghoshal"/></div>
+        <div><Lbl ch="Category"/><Sel value={form.category??""} onChange={fset("category")} options={ARTIST_CATS}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div><Lbl ch="Phone"/><Inp value={form.phone??""} onChange={fset("phone")} placeholder="9876543210"/></div>
+          <div><Lbl ch="Email"/><Inp value={form.email??""} onChange={fset("email")} placeholder="artist@email.com"/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div><Lbl ch="Location"/><Inp value={form.location??""} onChange={fset("location")} placeholder="Mumbai"/></div>
+          <div><Lbl ch="Rate/Budget"/><Inp value={form.rate??""} onChange={fset("rate")} placeholder="₹50,000/day"/></div>
+        </div>
+        <div><Lbl ch="Link (Instagram, Spotify, IMDb…)"/><Inp value={form.link??""} onChange={fset("link")} placeholder="https://instagram.com/artist"/></div>
+        <div><Lbl ch="Notes"/><TA value={form.notes??""} onChange={fset("notes")} placeholder="Any notes…"/></div>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={()=>setShowAdd(false)}>Cancel</button><button className="btn-p" onClick={doAdd}>Add artist</button></div>
+      </div>
+    </Modal>}
+    {/* Edit Modal */}
+    {editArtist&&<Modal title="Edit Artist" onClose={()=>setEditArtist(null)}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div><Lbl ch="Name"/><Inp value={editArtist.name??""} onChange={v=>setEditArtist(a=>({...a,name:v}))} placeholder="Artist name"/></div>
+        <div><Lbl ch="Category"/><Sel value={editArtist.category??""} onChange={v=>setEditArtist(a=>({...a,category:v}))} options={ARTIST_CATS}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div><Lbl ch="Phone"/><Inp value={editArtist.phone??""} onChange={v=>setEditArtist(a=>({...a,phone:v}))} placeholder="9876543210"/></div>
+          <div><Lbl ch="Email"/><Inp value={editArtist.email??""} onChange={v=>setEditArtist(a=>({...a,email:v}))} placeholder="artist@email.com"/></div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div><Lbl ch="Location"/><Inp value={editArtist.location??""} onChange={v=>setEditArtist(a=>({...a,location:v}))} placeholder="Mumbai"/></div>
+          <div><Lbl ch="Rate/Budget"/><Inp value={editArtist.rate??""} onChange={v=>setEditArtist(a=>({...a,rate:v}))} placeholder="₹50,000/day"/></div>
+        </div>
+        <div><Lbl ch="Link (Instagram, Spotify, IMDb…)"/><Inp value={editArtist.link??""} onChange={v=>setEditArtist(a=>({...a,link:v}))} placeholder="https://instagram.com/artist"/></div>
+        <div><Lbl ch="Notes"/><TA value={editArtist.notes??""} onChange={v=>setEditArtist(a=>({...a,notes:v}))} placeholder="Any notes…"/></div>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}><button className="btn-g" onClick={()=>setEditArtist(null)}>Cancel</button><button className="btn-p" onClick={doEdit}>Save artist</button></div>
+      </div>
+    </Modal>}
+  </div>);
+}
 
 /* ── ROOT APP ── */
 export default function App(){
@@ -1175,6 +1336,7 @@ export default function App(){
           {safeTab==="finance"&&isAdmin&&<FinanceView/>}
           {safeTab==="clients"&&<ClientsView role={role}/>}
           {safeTab==="crew"&&<CrewView allCrew={allCrew} setAllCrew={setAllCrew} projects={[]} role={role}/>}
+          {safeTab==="artists"&&<ArtistsView role={role}/>}
           {safeTab==="quotes"&&isAdmin&&<QuotesView projects={[]}/>}
           {safeTab==="about"&&<AboutView role={role}/>}
         </main>
