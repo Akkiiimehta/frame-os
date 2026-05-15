@@ -152,85 +152,234 @@ function exportProject(project, crew){
     <title>${project.title}</title>
 
     <style>
+
+      *{
+        box-sizing:border-box;
+      }
+
       body{
-        font-family:Arial,sans-serif;
-        padding:40px;
-        color:#111;
+        margin:0;
+        background:#0f1117;
+        color:#f5f7fa;
+        font-family:Inter,Arial,sans-serif;
+        padding:48px;
+      }
+
+      .wrap{
+        max-width:1100px;
+        margin:auto;
+      }
+
+      .top{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        padding-bottom:24px;
+        border-bottom:1px solid rgba(255,255,255,.12);
+        margin-bottom:36px;
+      }
+
+      .brand{
+        font-size:13px;
+        letter-spacing:.18em;
+        text-transform:uppercase;
+        color:#7dd3fc;
+        margin-bottom:12px;
       }
 
       h1{
-        border-bottom:2px solid #111;
-        padding-bottom:10px;
+        margin:0;
+        font-size:42px;
+        line-height:1.1;
+        font-weight:800;
+        color:#fff;
       }
 
-      h2{
-        margin-top:30px;
+      .sub{
+        margin-top:10px;
+        color:#9ca3af;
+        font-size:15px;
+      }
+
+      .badge{
+        display:inline-block;
+        padding:7px 14px;
+        border-radius:999px;
+        background:rgba(125,211,252,.12);
+        border:1px solid rgba(125,211,252,.25);
+        color:#7dd3fc;
+        font-size:12px;
+        margin-right:8px;
+        margin-top:10px;
+      }
+
+      .sec{
+        margin-top:38px;
+      }
+
+      .sec h2{
+        font-size:13px;
+        text-transform:uppercase;
+        letter-spacing:.12em;
+        color:#9ca3af;
+        margin-bottom:16px;
       }
 
       table{
         width:100%;
         border-collapse:collapse;
-        margin-top:12px;
-      }
-
-      th,td{
-        border:1px solid #ddd;
-        padding:10px;
-        text-align:left;
+        overflow:hidden;
+        border-radius:18px;
+        background:#161a22;
       }
 
       th{
-        background:#111;
+        text-align:left;
+        background:#1d2330;
+        color:#dbe4ee;
+        padding:16px;
+        font-size:13px;
+        font-weight:600;
+        border-bottom:1px solid rgba(255,255,255,.06);
+      }
+
+      td{
+        padding:16px;
+        font-size:14px;
+        color:#f3f4f6;
+        border-bottom:1px solid rgba(255,255,255,.05);
+      }
+
+      tr:last-child td{
+        border-bottom:none;
+      }
+
+      .note{
+        background:#161a22;
+        padding:22px;
+        border-radius:18px;
+        color:#d1d5db;
+        line-height:1.7;
+        border:1px solid rgba(255,255,255,.06);
+      }
+
+      .grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:18px;
+      }
+
+      .card{
+        background:#161a22;
+        border-radius:18px;
+        padding:20px;
+        border:1px solid rgba(255,255,255,.06);
+      }
+
+      .label{
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.1em;
+        color:#8b95a7;
+        margin-bottom:8px;
+      }
+
+      .value{
+        font-size:18px;
+        font-weight:600;
         color:#fff;
       }
 
-      .sec{
-        margin-top:28px;
-      }
     </style>
   </head>
 
   <body>
 
-    <h1>${project.title}</h1>
+    <div class="wrap">
 
-    <div class="sec">
-      <h2>Project Details</h2>
+      <div class="top">
 
-      <table>
-        <tr><th>Client</th><td>${project.client}</td></tr>
-        <tr><th>Type</th><td>${project.type}</td></tr>
-        <tr><th>Status</th><td>${project.status}</td></tr>
-        <tr><th>Shoot Date</th><td>${project.shoot || "TBD"}</td></tr>
-        <tr><th>Budget</th><td>₹${project.budget}</td></tr>
-        <tr><th>Location</th><td>${project.location || "-"}</td></tr>
-        <tr><th>Drive Link</th><td>${project.driveLink || "-"}</td></tr>
-      </table>
-    </div>
+        <div>
 
-    <div class="sec">
-      <h2>Crew</h2>
+          <div class="brand">
+            RIVTARA PRODUCTIONS
+          </div>
 
-      <table>
-        <tr>
-          <th>Name</th>
-          <th>Role</th>
-          <th>Phone</th>
-        </tr>
+          <h1>${project.title}</h1>
 
-        ${crew.map(c=>`
+          <div class="sub">
+            ${project.client}
+          </div>
+
+          <div>
+            <span class="badge">${project.type}</span>
+            <span class="badge">${project.status}</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="grid">
+
+        <div class="card">
+          <div class="label">Shoot Date</div>
+          <div class="value">${project.shoot || "TBD"}</div>
+        </div>
+
+        <div class="card">
+          <div class="label">Budget</div>
+          <div class="value">₹${project.budget || 0}</div>
+        </div>
+
+        <div class="card">
+          <div class="label">Location</div>
+          <div class="value">${project.location || "-"}</div>
+        </div>
+
+        <div class="card">
+          <div class="label">Drive Link</div>
+          <div class="value">
+            ${project.driveLink || "-"}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="sec">
+
+        <h2>Crew</h2>
+
+        <table>
+
           <tr>
-            <td>${c.name}</td>
-            <td>${c.role}</td>
-            <td>${c.phone || "-"}</td>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Phone</th>
           </tr>
-        `).join("")}
-      </table>
-    </div>
 
-    <div class="sec">
-      <h2>Notes</h2>
-      <p>${project.notes || "No notes"}</p>
+          ${crew.map(c=>`
+            <tr>
+              <td>${c.name}</td>
+              <td>${c.role}</td>
+              <td>${c.phone || "-"}</td>
+            </tr>
+          `).join("")}
+
+        </table>
+
+      </div>
+
+      <div class="sec">
+
+        <h2>Notes</h2>
+
+        <div class="note">
+          ${project.notes || "No notes added."}
+        </div>
+
+      </div>
+
     </div>
 
   </body>
@@ -251,7 +400,6 @@ function exportProject(project, crew){
 
   URL.revokeObjectURL(url);
 }
-
 
 /* ── UI HELPERS ── */
 function LoadingScreen({msg="Loading…"}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}><div style={{width:36,height:36,border:"2px solid rgba(255,255,255,0.1)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/><div style={{fontSize:13,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{msg}</div><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;}
