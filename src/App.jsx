@@ -92,17 +92,31 @@ async function dbDeleteVendor(id){await supabase.from("vendors").delete().eq("id
 /* ── PROJECT DB ── */
 async function dbUpsertProject(p){
   const row={title:p.title||"",client:p.client||"",type:p.type||"TVC",status:p.status||"Pre-Production",shoot_date:p.shoot||"",budget:Number(p.budget)||0,location:p.location||"",drive_link:p.driveLink||"",tags:Array.isArray(p.tags)?p.tags:[],notes:p.notes||"",crew_ids:Array.isArray(p.crewIds)?p.crewIds.map(Number):[]};
-  if(p.id&&p.id<2e13){const{data}=await supabase.from("projects").update(row).eq("id",p.id).select();return data&&data[0]?mpP(data[0]):p;}
-  const{data}=await supabase.from("projects").insert(row).select();return data&&data[0]?mpP(data[0]):p;
+  console.log("dbUpsertProject row →", row);
+  if(p.id&&p.id<2e13){
+    const{data,error}=await supabase.from("projects").update(row).eq("id",p.id).select();
+    if(error){console.error("PROJECT UPDATE ERROR:",error);alert("Update failed: "+error.message);return p;}
+    return data&&data[0]?mpP(data[0]):p;
+  }
+  const{data,error}=await supabase.from("projects").insert(row).select();
+  console.log("PROJECT INSERT result →", data, error);
+  if(error){console.error("PROJECT INSERT ERROR:",error);alert("Add project failed: "+error.message);return p;}
+  return data&&data[0]?mpP(data[0]):p;
 }
 async function dbDeleteProject(id){await supabase.from("projects").delete().eq("id",id);}
 
 /* ── ARTIST MAPPER & DB ── */
-const mpArtist=r=>({id:r.id,name:r.name||"",category:r.type||"Singer",phone:r.phone||"",email:r.email||"",instagram:r.instagram||"",portfolio:r.portfolio||"",location:r.location||"",notes:r.notes||"",tags:Array.isArray(r.tags)?r.tags:[]});
+const mpArtist=r=>({id:r.id,name:r.name||"",category:r.type||"Singer",phone:r.phone||"",email:r.email||"",instagram:r.instagram||"",portfolio:r.portfolio_link||"",agency:r.agency||"",location:r.location||"",notes:r.notes||"",tags:Array.isArray(r.tags)?r.tags:[]});
 async function dbUpsertArtist(a){
-  const row={name:a.name||"",type:a.category||"Singer",phone:a.phone||"",email:a.email||"",instagram:a.instagram||"",portfolio:a.portfolio||"",location:a.location||"",notes:a.notes||"",tags:Array.isArray(a.tags)?a.tags:[]};
-  if(a.id&&a.id<2e13){const{data}=await supabase.from("artists").update(row).eq("id",a.id).select();return data&&data[0]?mpArtist(data[0]):a;}
-  const{data}=await supabase.from("artists").insert(row).select();return data&&data[0]?mpArtist(data[0]):a;
+  const row={name:a.name||"",type:a.category||"Singer",phone:a.phone||"",email:a.email||"",instagram:a.instagram||"",portfolio_link:a.portfolio||"",agency:a.agency||"",location:a.location||"",notes:a.notes||"",tags:Array.isArray(a.tags)?a.tags:[]};
+  if(a.id&&a.id<2e13){
+    const{data,error}=await supabase.from("artists").update(row).eq("id",a.id).select();
+    if(error){console.error("ARTIST UPDATE ERROR:",error);alert("Update failed: "+error.message);return a;}
+    return data&&data[0]?mpArtist(data[0]):a;
+  }
+  const{data,error}=await supabase.from("artists").insert(row).select();
+  if(error){console.error("ARTIST INSERT ERROR:",error);alert("Add artist failed: "+error.message);return a;}
+  return data&&data[0]?mpArtist(data[0]):a;
 }
 async function dbDeleteArtist(id){await supabase.from("artists").delete().eq("id",id);}
 
@@ -1178,7 +1192,7 @@ function ArtistsView({role}){
   const[allArtists,setAllArtists,,, refetchArtists]=useDB("artists",mpArtist);
   const[filterCat,setFilterCat]=useState("All");const[search,setSearch]=useState("");
   const[showAdd,setShowAdd]=useState(false);const[editArtist,setEditArtist]=useState(null);
-  const blankForm={name:"",category:"Singer",phone:"",email:"",instagram:"",portfolio:"",location:"",notes:"",tags:[]};
+  const blankForm={name:"",category:"Singer",phone:"",email:"",instagram:"",portfolio:"",agency:"",location:"",notes:"",tags:[]};
   const[form,setForm]=useState(blankForm);
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=allArtists.filter(a=>{
@@ -1240,6 +1254,7 @@ function ArtistsView({role}){
           {a.location&&<div>📍 {a.location}</div>}
           {a.phone&&<div>📞 <span style={{fontFamily:"'Geist Mono',monospace"}}>{a.phone}</span></div>}
           {a.email&&<div>✉ {a.email}</div>}
+          {a.agency&&<div>🏢 {a.agency}</div>}
           {a.instagram&&<a href={safeLink(a.instagram)} target="_blank" rel="noopener noreferrer" style={{color:"var(--purple)",textDecoration:"none"}}>📸 Instagram</a>}
           {a.portfolio&&<a href={safeLink(a.portfolio)} target="_blank" rel="noopener noreferrer" style={{color:"var(--accent)",textDecoration:"none"}}>🔗 Portfolio / IMDb</a>}
         </div>
@@ -1266,6 +1281,7 @@ function ArtistsView({role}){
         <div><Lbl ch="Location"/><Inp value={form.location??""} onChange={fset("location")} placeholder="Mumbai"/></div>
         <div><Lbl ch="Instagram URL"/><Inp value={form.instagram??""} onChange={fset("instagram")} placeholder="https://instagram.com/artist"/></div>
         <div><Lbl ch="Portfolio / IMDb / Spotify"/><Inp value={form.portfolio??""} onChange={fset("portfolio")} placeholder="https://imdb.com/name/..."/></div>
+        <div><Lbl ch="Agency (optional)"/><Inp value={form.agency??""} onChange={fset("agency")} placeholder="Kwan, IPRS, Independent…"/></div>
         <div><Lbl ch="Tags (comma separated)"/><Inp value={(form.tags||[]).join(", ")} onChange={v=>setForm(f=>({...f,tags:v.split(",").map(t=>t.trim()).filter(Boolean)}))} placeholder="bollywood, playback, live"/></div>
         <div><Lbl ch="Notes"/><TA value={form.notes??""} onChange={fset("notes")} placeholder="Any additional notes…"/></div>
         <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}>
@@ -1292,6 +1308,7 @@ function ArtistsView({role}){
         <div><Lbl ch="Location"/><Inp value={editArtist.location??""} onChange={v=>setEditArtist(a=>({...a,location:v}))} placeholder="Mumbai"/></div>
         <div><Lbl ch="Instagram URL"/><Inp value={editArtist.instagram??""} onChange={v=>setEditArtist(a=>({...a,instagram:v}))} placeholder="https://instagram.com/artist"/></div>
         <div><Lbl ch="Portfolio / IMDb / Spotify"/><Inp value={editArtist.portfolio??""} onChange={v=>setEditArtist(a=>({...a,portfolio:v}))} placeholder="https://imdb.com/name/..."/></div>
+        <div><Lbl ch="Agency (optional)"/><Inp value={editArtist.agency??""} onChange={v=>setEditArtist(a=>({...a,agency:v}))} placeholder="Kwan, IPRS, Independent…"/></div>
         <div><Lbl ch="Tags (comma separated)"/><Inp value={(editArtist.tags||[]).join(", ")} onChange={v=>setEditArtist(a=>({...a,tags:v.split(",").map(t=>t.trim()).filter(Boolean)}))} placeholder="bollywood, playback, live"/></div>
         <div><Lbl ch="Notes"/><TA value={editArtist.notes??""} onChange={v=>setEditArtist(a=>({...a,notes:v}))} placeholder="Any additional notes…"/></div>
         <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:4}}>
