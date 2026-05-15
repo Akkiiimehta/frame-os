@@ -89,7 +89,12 @@ async function dbUpsertVendor(v){
 }
 async function dbDeleteVendor(id){await supabase.from("vendors").delete().eq("id",id);}
 
-/* ── DELETE PROJECT ── */
+/* ── PROJECT DB ── */
+async function dbUpsertProject(p){
+  const row={title:p.title||"",client:p.client||"",type:p.type||"TVC",status:p.status||"Pre-Production",shoot_date:p.shoot||"",budget:Number(p.budget)||0,location:p.location||"",drive_link:p.driveLink||"",tags:Array.isArray(p.tags)?p.tags:[],notes:p.notes||"",crew_ids:Array.isArray(p.crewIds)?p.crewIds.map(Number):[]};
+  if(p.id&&p.id<2e13){const{data}=await supabase.from("projects").update(row).eq("id",p.id).select();return data&&data[0]?mpP(data[0]):p;}
+  const{data}=await supabase.from("projects").insert(row).select();return data&&data[0]?mpP(data[0]):p;
+}
 async function dbDeleteProject(id){await supabase.from("projects").delete().eq("id",id);}
 
 /* ── ARTIST MAPPER & DB ── */
@@ -533,7 +538,7 @@ function ProjectsView({allCrew,setAllCrew,role,expTrackerUrl,allVendors}){
   const doAdd=async()=>{
     if(!form.title.trim()||!form.client.trim())return;
     const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
-    const saved=await dbUpsertProject({...form,crewIds:[],budget:Number(form.budget)||0,tags,id:Date.now()});
+    const saved=await dbUpsertProject({...form,crewIds:[],budget:Number(form.budget)||0,tags});
     setProjects(ps=>[...ps,saved]);
     setForm({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
     setShowAdd(false);
@@ -827,9 +832,11 @@ function CrewView({allCrew,setAllCrew,projects,role}){
   const doAdd=async()=>{
     if(!form.name.trim())return;
     const tags=form.tags.split(",").map(t=>t.trim()).filter(Boolean);
-    const saved=await dbUpsertCrew({...form,tags,projects:[],id:Date.now()});
+    const finalRole=form.role==="Custom"?(form.customRole||"").trim()||"Other":form.role;
+    if(!finalRole){alert("Enter a custom role");return;}
+    const saved=await dbUpsertCrew({...form,role:finalRole,tags,projects:[]});
     setAllCrew(c=>[...c,saved]);
-    setForm({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});
+    setForm({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:"",customRole:""});
     setShowAdd(false);
   };
   return(<div>
@@ -892,7 +899,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     })()}
     {isAdmin&&showAdd&&<Modal title="Add crew member" onClose={()=>setShowAdd(false)}><div style={{display:"flex",flexDirection:"column",gap:13}}>
       <div><Lbl ch="Full name"/><Inp value={form.name} onChange={fset("name")} placeholder="Rahul Verma"/></div>
-      <div><Lbl ch="Role"/><Sel value={form.role} onChange={fset("role")} options={[...allRoleOptions,"Custom"]}/>{form.role==="Custom"&&<Inp value={form.customRole||""} onChange={(v)=>setForm(f=>({...f,customRole:v,role:v}))} placeholder="Enter custom role" style={{marginTop:8}}/>}</div>
+      <div><Lbl ch="Role"/><Sel value={form.role} onChange={v=>setForm(f=>({...f,role:v,customRole:""}))} options={[...allRoleOptions,"Custom"]}/>{form.role==="Custom"&&<Inp value={form.customRole||""} onChange={v=>setForm(f=>({...f,customRole:v}))} placeholder="Type role e.g. Colorist" style={{marginTop:8}}/>}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><Lbl ch="Phone"/><Inp value={form.phone} onChange={fset("phone")} placeholder="9876543210"/></div><div><Lbl ch="Email"/><Inp value={form.email} onChange={fset("email")} placeholder="name@email.com"/></div></div>
       <div><Lbl ch="Location"/><Inp value={form.location} onChange={fset("location")} placeholder="Mumbai"/></div>
       <div><Lbl ch="Tags"/><Inp value={form.tags} onChange={fset("tags")} placeholder="arri, studio"/></div>
@@ -1245,7 +1252,13 @@ function ArtistsView({role}){
     {showAdd&&<Modal title="Add Artist" onClose={()=>setShowAdd(false)}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <div><Lbl ch="Name"/><Inp value={form.name??""} onChange={fset("name")} placeholder="Shreya Ghoshal"/></div>
-        <div><Lbl ch="Type"/><Sel value={form.category??""} onChange={fset("category")} options={ARTIST_CATS}/></div>
+        <div>
+          <Lbl ch="Type — pick one or type your own"/>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+            {ARTIST_CATS.map(c=><button key={c} type="button" onClick={()=>setForm(f=>({...f,category:c}))} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",padding:"4px 12px",borderRadius:20,cursor:"pointer",background:form.category===c?"var(--purple)":"transparent",color:form.category===c?"#fff":"var(--text2)",border:`1px solid ${form.category===c?"var(--purple)":"var(--border)"}`}}>{c}</button>)}
+          </div>
+          <Inp value={form.category??""} onChange={fset("category")} placeholder="Or type a custom type…"/>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <div><Lbl ch="Phone"/><Inp value={form.phone??""} onChange={fset("phone")} placeholder="9876543210"/></div>
           <div><Lbl ch="Email"/><Inp value={form.email??""} onChange={fset("email")} placeholder="artist@email.com"/></div>
@@ -1265,7 +1278,13 @@ function ArtistsView({role}){
     {editArtist&&<Modal title="Edit Artist" onClose={()=>setEditArtist(null)}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <div><Lbl ch="Name"/><Inp value={editArtist.name??""} onChange={v=>setEditArtist(a=>({...a,name:v}))} placeholder="Artist name"/></div>
-        <div><Lbl ch="Type"/><Sel value={editArtist.category??""} onChange={v=>setEditArtist(a=>({...a,category:v}))} options={ARTIST_CATS}/></div>
+        <div>
+          <Lbl ch="Type — pick one or type your own"/>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+            {ARTIST_CATS.map(c=><button key={c} type="button" onClick={()=>setEditArtist(a=>({...a,category:c}))} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",padding:"4px 12px",borderRadius:20,cursor:"pointer",background:editArtist.category===c?"var(--purple)":"transparent",color:editArtist.category===c?"#fff":"var(--text2)",border:`1px solid ${editArtist.category===c?"var(--purple)":"var(--border)"}`}}>{c}</button>)}
+          </div>
+          <Inp value={editArtist.category??""} onChange={v=>setEditArtist(a=>({...a,category:v}))} placeholder="Or type a custom type…"/>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <div><Lbl ch="Phone"/><Inp value={editArtist.phone??""} onChange={v=>setEditArtist(a=>({...a,phone:v}))} placeholder="9876543210"/></div>
           <div><Lbl ch="Email"/><Inp value={editArtist.email??""} onChange={v=>setEditArtist(a=>({...a,email:v}))} placeholder="artist@email.com"/></div>
