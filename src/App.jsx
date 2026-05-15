@@ -93,12 +93,17 @@ async function dbDeleteVendor(id){await supabase.from("vendors").delete().eq("id
 async function dbUpsertProject(p){
   const row={title:p.title||"",client:p.client||"",type:p.type||"TVC",status:p.status||"Pre-Production",shoot_date:p.shoot||"",budget:Number(p.budget)||0,location:p.location||"",drive_link:p.driveLink||"",tags:Array.isArray(p.tags)?p.tags:[],notes:p.notes||"",crew_ids:Array.isArray(p.crewIds)?p.crewIds.map(Number):[]};
   console.log("dbUpsertProject row →", row);
-  if(p.id&&p.id<2e13){
-    const{data,error}=await supabase.from("projects").update(row).eq("id",p.id).select();
+if(p.id && Number.isInteger(p.id)){
+  const{data,error}=await supabase.from("projects").update(row).eq("id",p.id).select();
     if(error){console.error("PROJECT UPDATE ERROR:",error);alert("Update failed: "+error.message);return p;}
     return data&&data[0]?mpP(data[0]):p;
   }
-  const{data,error}=await supabase.from("projects").insert(row).select();
+delete row.id;
+
+const { data, error } = await supabase
+  .from("projects")
+  .insert([row])
+  .select();
   console.log("PROJECT INSERT result →", data, error);
   if(error){console.error("PROJECT INSERT ERROR:",error);alert("Add project failed: "+error.message);return p;}
   return data&&data[0]?mpP(data[0]):p;
