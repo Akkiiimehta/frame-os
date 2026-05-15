@@ -144,6 +144,113 @@ function exportToPDF(title,dataArray){
   a.href=url;a.download=`${title.replace(/\s+/g,"_")}.html`;a.click();
   URL.revokeObjectURL(url);
 }
+function exportProject(project, crew){
+
+  const html = `
+  <html>
+  <head>
+    <title>${project.title}</title>
+
+    <style>
+      body{
+        font-family:Arial,sans-serif;
+        padding:40px;
+        color:#111;
+      }
+
+      h1{
+        border-bottom:2px solid #111;
+        padding-bottom:10px;
+      }
+
+      h2{
+        margin-top:30px;
+      }
+
+      table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:12px;
+      }
+
+      th,td{
+        border:1px solid #ddd;
+        padding:10px;
+        text-align:left;
+      }
+
+      th{
+        background:#111;
+        color:#fff;
+      }
+
+      .sec{
+        margin-top:28px;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <h1>${project.title}</h1>
+
+    <div class="sec">
+      <h2>Project Details</h2>
+
+      <table>
+        <tr><th>Client</th><td>${project.client}</td></tr>
+        <tr><th>Type</th><td>${project.type}</td></tr>
+        <tr><th>Status</th><td>${project.status}</td></tr>
+        <tr><th>Shoot Date</th><td>${project.shoot || "TBD"}</td></tr>
+        <tr><th>Budget</th><td>₹${project.budget}</td></tr>
+        <tr><th>Location</th><td>${project.location || "-"}</td></tr>
+        <tr><th>Drive Link</th><td>${project.driveLink || "-"}</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <h2>Crew</h2>
+
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Phone</th>
+        </tr>
+
+        ${crew.map(c=>`
+          <tr>
+            <td>${c.name}</td>
+            <td>${c.role}</td>
+            <td>${c.phone || "-"}</td>
+          </tr>
+        `).join("")}
+      </table>
+    </div>
+
+    <div class="sec">
+      <h2>Notes</h2>
+      <p>${project.notes || "No notes"}</p>
+    </div>
+
+  </body>
+  </html>
+  `;
+
+  const blob = new Blob([html], { type:"text/html" });
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+
+  a.href = url;
+
+  a.download = `${project.title.replace(/\s+/g,"_")}.html`;
+
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 
 /* ── UI HELPERS ── */
@@ -453,8 +560,15 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
           <div style={{flex:1,minWidth:0,marginRight:12}}><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:3}}>{project.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{project.client}</div></div>
           <div style={{display:"flex",gap:8}}>
             {isAdmin&&<button className="btn-g" style={{fontSize:12,padding:"5px 12px",color:"var(--teal)",borderColor:"rgba(90,200,250,.25)"}} onClick={()=>setShowCS(true)}>📋 Call sheet</button>}
-            {isAdmin&&<button className="btn-g" style={{fontSize:12,padding:"5px 12px"}} onClick={()=>{const data=[{Title:project.title,Client:project.client,Type:project.type,Status:project.status,"Shoot Date":project.shoot,Budget:project.budget,Location:project.location,Notes:project.notes}];const csv=[Object.keys(data[0]).join(","),data.map(r=>Object.keys(data[0]).map(h=>JSON.stringify(r[h]||"")).join(",")).join("\n")].join("\n");const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${project.title.replace(/\s+/g,"_")}_project.csv`;a.click();URL.revokeObjectURL(url);}}>📥 Export</button>}
-            <button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+{isAdmin&&<button
+  className="btn-g"
+  style={{fontSize:12,padding:"5px 12px"}}
+  onClick={()=>{
+    exportProject(project, crewOnP);
+  }}
+>
+  📥 Export
+</button>}            <button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           </div>
         </div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><Badge status={project.status}/><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{project.type}</span>{project.location&&<span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>📍 {project.location}</span>}</div>
