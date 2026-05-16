@@ -1292,8 +1292,8 @@ function QuotesView({projects}){
 
 
 /* ── NAV ARRAYS ── */
-const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
-const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎬",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎬",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 
 /* ── SIDEBAR ── */
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
@@ -1491,7 +1491,7 @@ function ArtistsView({role}){
   const safeLink=url=>{if(!url)return"";return url.startsWith("http")?url:"https://"+url;};
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎤" delay={0}/>
+      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎬" delay={0}/>
       <SC2 label="Singers" value={allArtists.filter(a=>a.category==="Singer").length} color="var(--purple)" icon="🎵" delay={50}/>
       <SC2 label="Actors" value={allArtists.filter(a=>a.category==="Actor").length} color="var(--accent)" icon="🎭" delay={100}/>
       <SC2 label="Models" value={allArtists.filter(a=>a.category==="Model").length} color="var(--teal)" icon="📸" delay={150}/>
