@@ -722,7 +722,7 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
                     const isChecked = checked[i] === true;
                     return (
                       <tr key={i} onClick={() => toggleRow(i)} style={{ borderTop: "1px solid var(--border)", cursor: "pointer", opacity: isChecked ? 1 : 0.45, background: r.isDup ? "rgba(255,214,10,0.04)" : "transparent" }}>
-                        <td style={{ padding: "6px 8px", textAlign: "center" }} onClick={e => { e.stopPropagation(); toggleRow(i); }}>
+                        <td style={{ padding: "6px 8px", textAlign: "center" }} onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={isChecked} onChange={() => toggleRow(i)} style={{ cursor: "pointer" }}/>
                         </td>
                         <td style={{ padding: "6px 10px", color: "var(--text)" }}>
@@ -1040,10 +1040,21 @@ function CSPanel({project,allCrew,onClose}){
 
 /* ── INVOICE PANEL ── */
 function InvPanel({invoice,onClose,onUpdate,onDelete}){
-  const[pf,setPf]=useState({amount:"",date:"",note:""});
-  const rec=totalRec(invoice);const rem=invoice.amount-rec;const pct=Math.min(100,invoice.amount>0?(rec/invoice.amount)*100:0);
+  const today=new Date().toISOString().split("T")[0];
+  const[pf,setPf]=useState({amount:"",date:today,note:""});
+  const rec=totalRec(invoice);
+  const invAmt=Number(invoice.amount)||0;
+  const rem=invAmt-rec;
+  const pct=Math.min(100,invAmt>0?(rec/invAmt)*100:0);
   const sc=SC[invoice.status]||SC["Pending"];
-  const addP=()=>{const a=Number(pf.amount);if(!a||!pf.date)return;const np=[...invoice.payments,{id:Date.now(),amount:a,date:pf.date,note:pf.note}];onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});setPf({amount:"",date:"",note:""});};
+  const addP=()=>{
+    const a=Number(pf.amount);
+    if(!a||a<=0){alert("Enter a valid amount");return;}
+    const date=pf.date||today;
+    const np=[...invoice.payments,{id:Date.now(),amount:a,date,note:pf.note}];
+    onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});
+    setPf({amount:"",date:today,note:""});
+  };
   const delP=pid=>{const np=invoice.payments.filter(p=>p.id!==pid);onUpdate(invoice.id,{payments:np,status:autoSt({...invoice,payments:np})});};
   return(<><div className="povl" onClick={onClose}/><div className="panel">
     <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
@@ -1058,7 +1069,11 @@ function InvPanel({invoice,onClose,onUpdate,onDelete}){
     </div>
     <div className="ps">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:18}}>
-        {[["Total",fmt(invoice.amount),"var(--text)"],["Received",fmt(rec),"var(--green)"],["Outstanding",fmt(Math.max(0,rem)),rem>0?"var(--red)":"var(--text3)"]].map(([l,v,c])=><div key={l} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"13px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:7}}>{l}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'Geist Mono',monospace"}}>{v}</div></div>)}
+        <div style={{background:"var(--bg3)",border:"1px solid var(--accent-bd)",borderRadius:10,padding:"13px 14px",cursor:"text"}} onClick={()=>{const v=window.prompt("Edit invoice total (₹):",invAmt);if(v&&Number(v)>0)onUpdate(invoice.id,{amount:Number(v)});}}>
+          <div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:7,display:"flex",alignItems:"center",gap:5}}>Total <span style={{fontSize:9,opacity:.5}}>✎</span></div>
+          <div style={{fontSize:16,fontWeight:600,color:"var(--text)",fontFamily:"'Geist Mono',monospace"}}>{fmt(invAmt)}</div>
+        </div>
+        {[["Received",fmt(rec),"var(--green)"],["Outstanding",fmt(Math.max(0,rem)),rem>0?"var(--red)":"var(--text3)"]].map(([l,v,c])=><div key={l} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"13px 14px"}}><div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:7}}>{l}</div><div style={{fontSize:16,fontWeight:600,color:c,fontFamily:"'Geist Mono',monospace"}}>{v}</div></div>)}
       </div>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:"var(--text2)"}}>Payment progress</span><span style={{fontSize:12,fontFamily:"'Geist Mono',monospace",color:sc.dot}}>{pct.toFixed(0)}%</span></div>
       <div style={{height:6,borderRadius:6,background:"var(--bg4)",overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,var(--green),${pct<100?"var(--amber)":"var(--green)"})`,borderRadius:6,transition:"width .6s ease"}}/></div>
@@ -1067,7 +1082,10 @@ function InvPanel({invoice,onClose,onUpdate,onDelete}){
       <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Payment history</div>
       {invoice.payments.length===0?<div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>No payments yet.</div>:invoice.payments.map((p,i)=><div key={p.id} style={{display:"flex",alignItems:"flex-start",gap:12,paddingBottom:i<invoice.payments.length-1?14:0,marginBottom:i<invoice.payments.length-1?14:0,borderBottom:i<invoice.payments.length-1?"1px solid var(--border)":"none"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}><div style={{width:10,height:10,borderRadius:"50%",background:"var(--green)",marginTop:3}}/>{i<invoice.payments.length-1&&<div style={{width:1,flex:1,background:"var(--border)",marginTop:4,minHeight:20}}/>}</div><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:15,fontWeight:600,color:"var(--green)",fontFamily:"'Geist Mono',monospace"}}>{fmt(p.amount)}</span><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{p.date}</span></div>{p.note&&<div style={{fontSize:12,color:"var(--text2)"}}>{p.note}</div>}</div><button onClick={()=>delP(p.id)} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,padding:"2px 4px"}}>✕</button></div>)}
     </div>
-    {rem>0?<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Log a payment</div><div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><Lbl ch="Amount (₹)"/><Inp value={pf.amount} onChange={v=>setPf(f=>({...f,amount:v}))} placeholder={`Max ${fmt(rem)}`}/></div><div><Lbl ch="Date"/><Inp type="date" value={pf.date} onChange={v=>setPf(f=>({...f,date:v}))}/></div></div><div><Lbl ch="Note"/><Inp value={pf.note} onChange={v=>setPf(f=>({...f,note:v}))} placeholder="e.g. 50% advance"/></div><button className="btn-p" style={{alignSelf:"flex-start"}} onClick={addP}>Add payment</button></div></div>:<div className="ps"><div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"var(--green)"}}><span>✓</span>Fully paid.</div></div>}
+    {rem>0
+      ?<div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Log a payment</div><div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><div><Lbl ch="Amount (₹)"/><Inp value={pf.amount} onChange={v=>setPf(f=>({...f,amount:v}))} placeholder={`Max ${fmt(rem)}`}/></div><div><Lbl ch="Date"/><Inp type="date" value={pf.date} onChange={v=>setPf(f=>({...f,date:v}))}/></div></div><div><Lbl ch="Note"/><Inp value={pf.note} onChange={v=>setPf(f=>({...f,note:v}))} placeholder="e.g. 50% advance"/></div><button className="btn-p" style={{alignSelf:"flex-start"}} onClick={addP}>Add payment</button></div></div>
+      :<div className="ps"><div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"var(--green)"}}><span>✓</span>Fully paid.</div></div>
+    }
   </div></>);
 }
 
@@ -1088,7 +1106,26 @@ function ProjPanel({project,invoices,allCrew,onClose,onUpdate,onStatusChange,onA
     <div className="panel" style={{width:490}}>
       <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-          <div style={{flex:1,minWidth:0,marginRight:12}}><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:3}}>{project.title}</div><div style={{fontSize:13,color:"var(--text2)"}}>{project.client}</div></div>
+          <div style={{flex:1,minWidth:0,marginRight:12}}>
+            {isAdmin
+              ?<input
+                  value={project.title}
+                  onChange={e=>onUpdate(project.id,{title:e.target.value})}
+                  style={{background:"transparent",border:"none",borderBottom:"1px solid var(--border2)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:19,fontWeight:700,lineHeight:1.2,width:"100%",padding:"0 0 3px",marginBottom:6}}
+                  placeholder="Project title"
+                />
+              :<div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:3}}>{project.title}</div>
+            }
+            {isAdmin
+              ?<input
+                  value={project.client}
+                  onChange={e=>onUpdate(project.id,{client:e.target.value})}
+                  style={{background:"transparent",border:"none",borderBottom:"1px solid var(--border2)",outline:"none",color:"var(--text2)",fontFamily:"'Geist',sans-serif",fontSize:13,width:"100%",padding:"0 0 2px"}}
+                  placeholder="Client name"
+                />
+              :<div style={{fontSize:13,color:"var(--text2)"}}>{project.client}</div>
+            }
+          </div>
           <div style={{display:"flex",gap:8}}>
             {isAdmin&&<button className="btn-g" style={{fontSize:12,padding:"5px 12px",color:"var(--teal)",borderColor:"rgba(90,200,250,.25)"}} onClick={()=>setShowCS(true)}>📋 Call sheet</button>}
 {isAdmin&&<button
