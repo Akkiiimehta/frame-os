@@ -567,36 +567,65 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
   const [err, setErr] = useState("");
   const fileRef = useRef();
 
+  const processRows = (parsed, map) => {
+    if (!map.name) { setErr("Could not detect a name column. Ensure your file has a column like 'Name', 'Full Name', or 'Artist Name'."); return; }
+    const nameCol = map.name;
+    const existingSet = new Set(existingNames.map(n => n.toLowerCase().trim()));
+    let dupCount = 0;
+    const valid = parsed.filter(r => {
+      const nm = (r[nameCol] || "").trim();
+      if (!nm) return false;
+      if (existingSet.has(nm.toLowerCase())) { dupCount++; return false; }
+      return true;
+    });
+    setRows(parsed);
+    setColMap(map);
+    setValidRows(valid);
+    setSkipped(parsed.length - valid.length - dupCount);
+    setDuplicates(dupCount);
+    setErr("");
+    setStep("preview");
+  };
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.name.endsWith(".csv")) { setErr("Please upload a .csv file."); return; }
+    const isXlsx = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+    const isCsv = file.name.endsWith(".csv");
+    if (!isXlsx && !isCsv) { setErr("Please upload a .csv or .xlsx file."); return; }
+    if (isXlsx) {
+      // Load SheetJS from CDN dynamically if not already loaded
+      const doXlsx = (XLSX) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const wb = XLSX.read(ev.target.result, { type: "array" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_csv(ws);
+            const { headers, rows: parsed } = parseCSVText(raw);
+            if (!headers.length || !parsed.length) { setErr("Sheet appears empty."); return; }
+            const map = type === "artist" ? detectArtistColMap(headers) : detectCrewColMap(headers);
+            processRows(parsed, map);
+          } catch(ex) { setErr("Failed to parse Excel file: " + ex.message); }
+        };
+        reader.readAsArrayBuffer(file);
+      };
+      if (window.XLSX) { doXlsx(window.XLSX); return; }
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      script.onload = () => doXlsx(window.XLSX);
+      script.onerror = () => setErr("Could not load Excel parser. Try saving as CSV and uploading that instead.");
+      document.head.appendChild(script);
+      return;
+    }
+    // CSV path
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const { headers, rows: parsed } = parseCSVText(ev.target.result);
         if (!headers.length || !parsed.length) { setErr("CSV appears empty or malformed."); return; }
         const map = type === "artist" ? detectArtistColMap(headers) : detectCrewColMap(headers);
-        if (!map.name) { setErr("Could not detect a name column. Ensure your CSV has a column like 'Name', 'Full Name', or 'Artist Name'."); return; }
-        const nameCol = map.name;
-        const existingSet = new Set(existingNames.map(n => n.toLowerCase().trim()));
-        let dupCount = 0;
-        const valid = parsed.filter(r => {
-          const nm = (r[nameCol] || "").trim();
-          if (!nm) return false;
-          if (existingSet.has(nm.toLowerCase())) { dupCount++; return false; }
-          return true;
-        });
-        setRows(parsed);
-        setColMap(map);
-        setValidRows(valid);
-        setSkipped(parsed.length - valid.length - dupCount);
-        setDuplicates(dupCount);
-        setErr("");
-        setStep("preview");
-      } catch {
-        setErr("Failed to parse CSV. Make sure it's a valid UTF-8 CSV file.");
-      }
+        processRows(parsed, map);
+      } catch { setErr("Failed to parse CSV. Make sure it is a valid UTF-8 CSV file."); }
     };
     reader.readAsText(file);
   };
@@ -616,7 +645,7 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
       {step === "upload" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 9, padding: "12px 14px", fontSize: 13, color: "var(--text2)", lineHeight: 1.7 }}>
-            Upload a <b style={{ color: "var(--text)" }}>.csv</b> file. Column headers are auto-detected — no exact format required.<br />
+            Upload a <b style={{ color: "var(--text)" }}>.csv or .xlsx</b> file. Column headers are auto-detected — no exact format required.<br />
             <span style={{ color: "var(--text3)", fontSize: 12 }}>
               {type === "artist"
                 ? "Supports: Name, Category/Type, Phone, Email, Instagram, Location"
@@ -624,8 +653,8 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
             </span>
           </div>
           {err && <div style={{ background: "var(--red-bg)", border: "1px solid rgba(255,69,58,.2)", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "var(--red)" }}>{err}</div>}
-          <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
-          <button className="btn-p" onClick={() => fileRef.current?.click()}>📂 Choose CSV file</button>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
+          <button className="btn-p" onClick={() => fileRef.current?.click()}>📂 Choose CSV / Excel file</button>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button className="btn-g" onClick={onClose}>Cancel</button>
           </div>
