@@ -435,8 +435,12 @@ function matchCol(headers, candidates) {
   const normalized = candidates.map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ""));
   for (const h of headers) {
     if (normalized.includes(h)) return h;
-    // partial match
+  }
+  // partial match only for headers/candidates with length >= 4 to avoid false positives
+  for (const h of headers) {
+    if (h.length < 4) continue;
     for (const n of normalized) {
+      if (n.length < 4) continue;
       if (h.includes(n) || n.includes(h)) return h;
     }
   }
@@ -486,7 +490,7 @@ function detectArtistColMap(headers) {
   return {
     name: matchCol(headers, ["name", "artistname", "fullname", "talent", "artistfullname"]),
     category: matchCol(headers, ["category", "type", "role", "profession", "artisttype", "genre"]),
-    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno", "contactno"]),
+    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno", "contactno", "contactnumber", "number"]),
     email: matchCol(headers, ["email", "mail", "emailid", "emailaddress"]),
     instagram: matchCol(headers, ["instagram", "ig", "handle", "instahandle", "instagramhandle", "ighandle"]),
     location: matchCol(headers, ["location", "city", "place", "based", "basedout", "basedoutin"]),
@@ -497,8 +501,8 @@ function detectArtistColMap(headers) {
 function detectCrewColMap(headers) {
   return {
     name: matchCol(headers, ["name", "fullname", "crewname", "membername"]),
-    role: matchCol(headers, ["role", "designation", "profession", "position", "jobtitle", "dept"]),
-    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno"]),
+    role: matchCol(headers, ["role", "designation", "profession", "position", "jobtitle", "dept", "title"]),
+    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno", "contactnumber", "number"]),
     email: matchCol(headers, ["email", "mail", "emailid", "emailaddress"]),
     location: matchCol(headers, ["location", "city", "place", "based"]),
   };
