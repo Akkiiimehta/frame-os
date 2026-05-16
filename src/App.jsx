@@ -1659,10 +1659,98 @@ function CrewView({allCrew,setAllCrew,projects,role}){
         <div style={{padding:"22px 26px 18px",borderBottom:"1px solid var(--border)",position:"sticky",top:0,background:"#14141a",zIndex:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}><Av name={m.name} idx={idx} size={46}/><div><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:4}}>{m.name}</div><RBadge role={m.role}/>{m.phone&&<div style={{fontSize:12,color:"var(--text2)",marginTop:5,display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{m.phone}</span></div>}</div></div>
-            <div style={{display:"flex",gap:8}}>
-              {isAdmin&&<><button onClick={()=>sendCrewToArtist(m)} title="Send to Artists" style={{background:"var(--purple-bg)",border:"1px solid rgba(191,90,242,.2)",color:"var(--purple)",height:30,padding:"0 10px",borderRadius:8,cursor:"pointer",fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>🎤 Artists</button><button onClick={()=>sendCrewToVendor(m)} title="Send to Vendors" style={{background:"var(--teal-bg)",border:"1px solid rgba(90,200,250,.2)",color:"var(--teal)",height:30,padding:"0 10px",borderRadius:8,cursor:"pointer",fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>🏭 Vendor</button><button onClick={()=>{if(window.confirm(`Remove ${m.name}?`)){delM(m.id);setSelected(null);}}} style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button></>}
-              <button onClick={()=>setSelected(null)} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-            </div>
+          <div style={{display:"flex",gap:8}}>
+  {isAdmin && (
+    <>
+      <button
+        onClick={()=>sendCrewToArtist(m)}
+        title="Send to Artists"
+        style={{
+          background:"var(--purple-bg)",
+          border:"1px solid rgba(191,90,242,.2)",
+          color:"var(--purple)",
+          height:30,
+          padding:"0 10px",
+          borderRadius:8,
+          cursor:"pointer",
+          fontSize:11,
+          fontWeight:600,
+          display:"flex",
+          alignItems:"center",
+          gap:5,
+          whiteSpace:"nowrap"
+        }}
+      >
+        <Clapperboard size={14}/>
+        Artists
+      </button>
+
+      <button
+        onClick={()=>sendCrewToVendor(m)}
+        title="Send to Vendors"
+        style={{
+          background:"var(--teal-bg)",
+          border:"1px solid rgba(90,200,250,.2)",
+          color:"var(--teal)",
+          height:30,
+          padding:"0 10px",
+          borderRadius:8,
+          cursor:"pointer",
+          fontSize:11,
+          fontWeight:600,
+          display:"flex",
+          alignItems:"center",
+          gap:5,
+          whiteSpace:"nowrap"
+        }}
+      >
+        <Camera size={14}/>
+        Vendor
+      </button>
+
+      <button
+        onClick={()=>{
+          if(window.confirm(`Remove ${m.name}?`)){
+            delM(m.id);
+            setSelected(null);
+          }
+        }}
+        style={{
+          background:"var(--red-bg)",
+          border:"1px solid rgba(255,69,58,.2)",
+          color:"var(--red)",
+          width:30,
+          height:30,
+          borderRadius:8,
+          cursor:"pointer",
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center"
+        }}
+      >
+        <Trash2 size={14}/>
+      </button>
+    </>
+  )}
+
+  <button
+    onClick={()=>setSelected(null)}
+    style={{
+      background:"var(--bg4)",
+      border:"1px solid var(--border)",
+      color:"var(--text2)",
+      width:30,
+      height:30,
+      borderRadius:8,
+      cursor:"pointer",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"center"
+    }}
+  >
+    <X size={14}/>
+  </button>
+</div>
           </div>
         </div>
         <div className="ps"><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:14}}>Contact</div>
@@ -1839,8 +1927,8 @@ function VendorsView({allVendors,setAllVendors,role}){
 
   return(<div>
     {/* Stats row */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Total vendors" value={allVendors.length} color="var(--text)" icon="🏭" delay={0}/>
+<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+  <SC2 label="Total vendors" value={allVendors.length} color="var(--text)" icon={<Building2 size={18}/>} delay={0}/>
       <SC2 label="Camera & Grip" value={(catCounts["Camera"]||0)+(catCounts["Grip"]||0)} color="var(--teal)" icon="🎥" delay={50}/>
       <SC2 label="Catering" value={catCounts["Catering"]||0} color="var(--amber)" icon="🍽" delay={100}/>
       <SC2 label="Transport" value={catCounts["Transport"]||0} color="var(--purple)" icon="🚐" delay={150}/>
