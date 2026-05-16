@@ -1,11 +1,43 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./lib/supabase";
 import {
-  FolderKanban, Wallet, Building2, Users2, Camera, Clapperboard,
-  FileText, UserCircle2, Search, Sun, Moon, Lock, LogOut,
-  ChevronLeft, ChevronRight, ReceiptText, Folder,
-  Phone, Mail, Globe, Instagram, Linkedin, Pencil,
-  LayoutGrid
+  FolderKanban,
+  Wallet,
+  Building2,
+  Users2,
+  Camera,
+  Clapperboard,
+  FileText,
+  UserCircle2,
+  Search,
+  Sun,
+  Moon,
+  Lock,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  ReceiptText,
+  Folder,
+  Phone,
+  Mail,
+  Globe,
+  Instagram,
+  Linkedin,
+  Pencil,
+  LayoutGrid,
+
+  Check,
+  Hourglass,
+  IndianRupee,
+  Scissors,
+  Music4,
+  Drama,
+  Mic2,
+  Truck,
+  UtensilsCrossed,
+  Star,
+  Trash2,
+  X
 } from "lucide-react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');`;
@@ -924,7 +956,7 @@ function Inp({value,onChange,placeholder,type="text",style={}}){return <input cl
 function TA({value,onChange,placeholder}){return <textarea className="input" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>;}
 function Sel({value,onChange,options}){return <select className="input" value={value} onChange={e=>onChange(e.target.value)}>{options.map(o=><option key={o}>{o}</option>)}</select>;}
 function Modal({title,onClose,children,width=480}){return <div className="ovl" onClick={onClose}><div className="mbox" style={{width}} onClick={e=>e.stopPropagation()}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}><span style={{fontSize:17,fontWeight:600,color:"var(--text)"}}>{title}</span><button onClick={onClose} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button></div>{children}</div></div>;}
-function SC2({label,value,sub,color,icon,delay=0}){return <div className="card fade-up" style={{padding:"20px",animationDelay:`${delay}ms`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:10}}>{label}</div><div style={{fontSize:26,fontWeight:600,color,lineHeight:1}}>{value}</div>{sub&&<div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>{sub}</div>}</div><span style={{fontSize:20,opacity:.35,marginTop:2}}>{icon}</span></div></div>;}
+function SC2({label,value,sub,color,icon,delay=0}){return <div className="card fade-up" style={{padding:"20px",animationDelay:`${delay}ms`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:10}}>{label}</div><div style={{fontSize:26,fontWeight:600,color,lineHeight:1}}>{value}</div>{sub&&<div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>{sub}</div>}</div><span style={{fontSize:20,opacity:.7,marginTop:2}}>{icon}</span></div></div>;}
 function Av({name,idx,size=26}){return <div title={name} style={{width:size,height:size,borderRadius:"50%",background:AVC[idx%AVC.length],border:"2px solid var(--bg2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:size>30?13:10,fontWeight:700,color:"#fff",flexShrink:0}}>{(name||"?")[0].toUpperCase()}</div>;}
 
 function ETags({tags,onAdd,onDelete}){const[adding,setAdding]=useState(false);const[val,setVal]=useState("");const ref=useRef();useEffect(()=>{if(adding&&ref.current)ref.current.focus();},[adding]);const commit=()=>{const t=val.trim();if(t&&!tags.includes(t))onAdd(t);setVal("");setAdding(false);};return <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>{tags.map(t=><span key={t} className="tchip">{t}<span className="del" onClick={()=>onDelete(t)}>✕</span></span>)}{adding?<input ref={ref} value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape"){setAdding(false);setVal("");}}} placeholder="tag…" style={{background:"var(--bg3)",border:"1px solid var(--accent)",borderRadius:6,color:"var(--text)",fontFamily:"'Geist Mono',monospace",fontSize:11,padding:"2px 8px",outline:"none",width:80}}/>:<button onClick={()=>setAdding(true)} style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"transparent",border:"1px dashed var(--border2)",color:"var(--text3)",borderRadius:6,padding:"2px 8px",cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--accent)";e.currentTarget.style.color="var(--accent)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text3)";}}>+ tag</button>}</div>;}
@@ -1276,16 +1308,17 @@ if(!form.title.trim() || !form.client.trim()){
     setForm({title:"",client:"",type:"TVC",status:"Pre-Production",shoot:"",budget:"",driveLink:"",location:"",tags:"",notes:""});
     setShowAdd(false);
   };
-  const selP=selected?projects.find(p=>p.id===selected.id):null;
-  if(loadingP)return <LoadingScreen msg="Loading projects…"/>;
-  if(errP)return <ErrScreen msg={errP}/>;
-  return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Projects" value={projects.length} color="var(--text)" icon="🎬" delay={0}/>
-      <SC2 label="Active" value={projects.filter(p=>p.status==="In Production").length} color="var(--accent)" icon="🎥" delay={50}/>
-      <SC2 label="Delivered" value={projects.filter(p=>p.status==="Delivered").length} color="var(--green)" icon="✓" delay={100}/>
-      {isAdmin?<SC2 label="Pipeline" value={`₹${(totalBudget/100000).toFixed(1)}L`} color="var(--text)" icon="₹" delay={150}/>:<SC2 label="Pre-Prod" value={projects.filter(p=>p.status==="Pre-Production").length} color="var(--teal)" icon="📅" delay={150}/>}
-    </div>
+ const selP=selected?projects.find(p=>p.id===selected.id):null;
+if(loadingP)return <LoadingScreen msg="Loading projects…"/>;
+if(errP)return <ErrScreen msg={errP}/>;
+
+return(<div>
+  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+    <SC2 label="Projects" value={projects.length} color="var(--text)" icon={<Clapperboard size={18}/>} delay={0}/>
+    <SC2 label="Active" value={projects.filter(p=>p.status==="In Production").length} color="var(--accent)" icon={<Camera size={18}/>} delay={50}/>
+    <SC2 label="Delivered" value={projects.filter(p=>p.status==="Delivered").length} color="var(--green)" icon={<Check size={18}/>} delay={100}/>
+    {isAdmin?<SC2 label="Pipeline" value={`₹${(totalBudget/100000).toFixed(1)}L`} color="var(--text)" icon={<IndianRupee size={18}/>} delay={150}/>:<SC2 label="Pre-Prod" value={projects.filter(p=>p.status==="Pre-Production").length} color="var(--teal)" icon={<FolderKanban size={18}/>} delay={150}/>}
+  </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       {["All",...PROJ_ST].map(s=><button key={s} className={`fpill${filter===s?" active":""}`} onClick={()=>setFilter(s)}>{s}</button>)}
       <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowExport(true)}>📊 Export</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New project</button></>}
@@ -1379,12 +1412,12 @@ function FinanceView(){
   if(loadingI||loadingP)return <LoadingScreen msg="Loading finance…"/>;
   if(errI)return <ErrScreen msg={errI}/>;
   return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}} className="g4">
-      <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} fully paid`} color="var(--green)" icon="✓" delay={0}/>
-      <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} invoices`} color="var(--orange)" icon="◑" delay={50}/>
-      <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length}`} color="var(--amber)" icon="⏳" delay={100}/>
-      <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} invoices`} color="var(--red)" icon="⚠" delay={150}/>
-    </div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}} className="g4">
+  <SC2 label="Collected" value={fmtK(paid+partial)} sub={`${invoices.filter(i=>i.status==="Paid").length} fully paid`} color="var(--green)" icon={<Check size={18}/>} delay={0}/>
+  <SC2 label="Partial" value={fmtK(partial)} sub={`${invoices.filter(i=>i.status==="Partial").length} invoices`} color="var(--orange)" icon={<ReceiptText size={18}/>} delay={50}/>
+  <SC2 label="Outstanding" value={fmtK(pending)} sub={`${invoices.filter(i=>["Pending","Partial"].includes(i.status)).length}`} color="var(--amber)" icon={<Hourglass size={18}/>} delay={100}/>
+  <SC2 label="Overdue" value={fmtK(overdue)} sub={`${invoices.filter(i=>i.status==="Overdue").length} invoices`} color="var(--red)" icon={<IndianRupee size={18}/>} delay={150}/>
+</div>
     <div className="card" style={{padding:"16px 20px",marginBottom:18}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Revenue overview</span><span style={{fontSize:15,fontWeight:600,fontFamily:"'Geist Mono',monospace"}}>{fmt(total)} total</span></div>
       <div style={{height:5,borderRadius:5,overflow:"hidden",display:"flex",background:"var(--bg4)"}}>{[[paid+partial,"var(--green)"],[pending,"var(--amber)"],[overdue,"var(--red)"]].map(([v,c],idx)=><div key={idx} style={{width:`${(v/total)*100}%`,background:c,transition:"width .5s ease"}}/>)}</div>
@@ -1438,11 +1471,11 @@ function ClientsView({role}){
     window.location.reload();
   };
   return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}} className="g3">
-      <SC2 label="Total clients" value={clients.length} color="var(--text)" icon="🏢" delay={0}/>
-      <SC2 label="Regular" value={clients.filter(c=>c.isRegular).length} color="var(--accent)" icon="⭐" delay={50}/>
-      <SC2 label="Outstanding" value={clients.filter(c=>c.outstanding>0).length} color="var(--amber)" icon="⏳" delay={100}/>
-    </div>
+  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}} className="g3">
+  <SC2 label="Total clients" value={clients.length} color="var(--text)" icon={<Building2 size={18}/>} delay={0}/>
+  <SC2 label="Regular" value={clients.filter(c=>c.isRegular).length} color="var(--accent)" icon={<Star size={18}/>} delay={50}/>
+  <SC2 label="Outstanding" value={clients.filter(c=>c.outstanding>0).length} color="var(--amber)" icon={<Hourglass size={18}/>} delay={100}/>
+</div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {clients.map((c,i)=>{const initials=c.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);return <div key={c.name} className="card clickable fade-up" style={{padding:"20px 22px",animationDelay:`${i*55}ms`,position:"relative",overflow:"hidden"}} onClick={()=>setSelected(c.name)}>
         {c.hasOverdue&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"var(--red)"}}/>}
@@ -1622,10 +1655,10 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     showToast(`${m.name} moved to Vendors ✓`);
   };
   return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Total crew" value={allCrew.length} color="var(--text)" icon="👥" delay={0}/>
-      {[["Directors","Director","var(--purple)","🎥"],["DOPs","DOP","var(--teal)","📷"],["Editors","Editor","var(--red)","✂"]].map(([l,r,c,ic])=><SC2 key={l} label={l} value={allCrew.filter(m=>m.role===r).length} color={c} icon={ic} delay={50}/>)}
-    </div>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+  <SC2 label="Total crew" value={allCrew.length} color="var(--text)" icon={<Users2 size={18}/>} delay={0}/>
+  {[["Directors","Director","var(--purple)",<Clapperboard size={18}/>],["DOPs","DOP","var(--teal)",<Camera size={18}/>],["Editors","Editor","var(--red)",<Scissors size={18}/>]].map(([l,r,c,ic])=><SC2 key={l} label={l} value={allCrew.filter(m=>m.role===r).length} color={c} icon={ic} delay={50}/>)}
+</div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       <Inp value={search} onChange={setSearch} placeholder="Search name or role…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All","Director","DOP","Producer","AD","Editor","Gaffer","Other"].map(r=><button key={r} className={`fpill${filterR===r?" active":""}`} onClick={()=>setFilterR(r)}>{r}</button>)}</div>
@@ -1815,12 +1848,12 @@ function QuotesView({projects}){
   const dlQ=(q)=>{const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quote — ${q.title}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:13px;color:#000;background:#fff;}.page{max-width:800px;margin:0 auto;padding:32px;}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;border-bottom:3px solid #000;padding-bottom:20px;}.co{font-size:22px;font-weight:900;}.co-s{font-size:10px;letter-spacing:0.15em;color:#555;margin-top:3px;}.qt{font-size:28px;font-weight:900;color:#e4002b;text-align:right;}.meta{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}.mb{font-size:12px;line-height:1.8;}.mb b{display:block;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#555;margin-bottom:4px;}table{width:100%;border-collapse:collapse;margin-bottom:20px;}th{background:#000;color:#fff;padding:9px 12px;font-size:11px;text-align:left;letter-spacing:0.06em;}td{padding:9px 12px;border-bottom:1px solid #ddd;font-size:12px;}.ts{border-top:2px solid #000;padding-top:12px;}.tr{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;}.grand{font-weight:900;font-size:16px;border-top:2px solid #000;padding-top:8px;margin-top:8px;}.foot{margin-top:32px;font-size:11px;color:#888;border-top:1px solid #ddd;padding-top:12px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div class="page"><div class="header"><div><div class="co">FRAME OS</div><div class="co-s">PRODUCTION SUITE</div></div><div><div class="qt">ESTIMATE</div><div style="font-size:11px;text-align:right;margin-top:6px;color:#555;">Quote #${q.id.toString().slice(-6)}<br>Date: ${q.createdAt}<br>Valid until: ${q.validUntil||"30 days"}</div></div></div><div class="meta"><div class="mb"><b>Prepared for</b>${q.client}${q.project?`<br>${q.project}`:""}</div><div class="mb"><b>Status</b><span style="background:${q.status==="Approved"?"#30d158":q.status==="Sent"?"#3a8ef6":"#666"};color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">${q.status}</span></div></div><table><thead><tr><th style="width:40%">Description</th><th>Category</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead><tbody>${(q.lines||[]).map((l,i)=>`<tr style="${i%2===1?"background:#f9f9f9":""}"><td>${l.desc||"—"}</td><td style="color:#666">${l.cat}</td><td style="text-align:center">${l.qty}</td><td style="text-align:right">₹${Number(l.rate).toLocaleString("en-IN")}</td><td style="text-align:right;font-weight:600">₹${(l.qty*l.rate).toLocaleString("en-IN")}</td></tr>`).join("")}</tbody></table><div class="ts"><div class="tr"><span>Subtotal</span><span>₹${sub(q).toLocaleString("en-IN")}</span></div><div class="tr"><span>GST (${q.taxPct}%)</span><span>₹${tax(q).toLocaleString("en-IN")}</span></div><div class="tr grand"><span>TOTAL</span><span>₹${grand(q).toLocaleString("en-IN")}</span></div></div>${q.notes?`<div style="margin-top:20px;font-size:12px;background:#f9f9f9;padding:12px;border-left:3px solid #e4002b;"><b>Notes:</b> ${q.notes}</div>`:""}<div class="foot">This is an estimate. Valid for ${q.validUntil||"30 days"} from date of issue.</div></div></body></html>`;const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));a.download=`Quote_${q.title.replace(/\s+/g,"_")}.html`;a.click();};
   const selQ=selected?quotes.find(q=>q.id===selected):null;
   return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Quotes" value={quotes.length} color="var(--text)" icon="📋" delay={0}/>
-      <SC2 label="Approved" value={quotes.filter(q=>q.status==="Approved").length} color="var(--green)" icon="✓" delay={50}/>
-      <SC2 label="Pending" value={quotes.filter(q=>["Draft","Sent"].includes(q.status)).length} color="var(--amber)" icon="⏳" delay={100}/>
-      <SC2 label="Total value" value={fmtK(quotes.reduce((s,q)=>s+grand(q),0))} color="var(--accent)" icon="₹" delay={150}/>
-    </div>
+<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+  <SC2 label="Quotes" value={quotes.length} color="var(--text)" icon={<FileText size={18}/>} delay={0}/>
+  <SC2 label="Approved" value={quotes.filter(q=>q.status==="Approved").length} color="var(--green)" icon={<Check size={18}/>} delay={50}/>
+  <SC2 label="Pending" value={quotes.filter(q=>["Draft","Sent"].includes(q.status)).length} color="var(--amber)" icon={<Hourglass size={18}/>} delay={100}/>
+  <SC2 label="Total value" value={fmtK(quotes.reduce((s,q)=>s+grand(q),0))} color="var(--accent)" icon={<IndianRupee size={18}/>} delay={150}/>
+</div>
     <div style={{display:"flex",justifyContent:"flex-end",marginBottom:18}}><button className="btn-p" onClick={()=>setShowAdd(true)}>+ New quote</button></div>
     {quotes.length===0&&<div style={{textAlign:"center",padding:"48px 0",color:"var(--text3)",fontSize:14}}>No quotes yet. Create your first estimate.</div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
@@ -1929,10 +1962,10 @@ function VendorsView({allVendors,setAllVendors,role}){
     {/* Stats row */}
 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
   <SC2 label="Total vendors" value={allVendors.length} color="var(--text)" icon={<Building2 size={18}/>} delay={0}/>
-      <SC2 label="Camera & Grip" value={(catCounts["Camera"]||0)+(catCounts["Grip"]||0)} color="var(--teal)" icon="🎥" delay={50}/>
-      <SC2 label="Catering" value={catCounts["Catering"]||0} color="var(--amber)" icon="🍽" delay={100}/>
-      <SC2 label="Transport" value={catCounts["Transport"]||0} color="var(--purple)" icon="🚐" delay={150}/>
-    </div>
+  <SC2 label="Camera & Grip" value={(catCounts["Camera"]||0)+(catCounts["Grip"]||0)} color="var(--teal)" icon={<Camera size={18}/>} delay={50}/>
+  <SC2 label="Catering" value={catCounts["Catering"]||0} color="var(--amber)" icon={<UtensilsCrossed size={18}/>} delay={100}/>
+  <SC2 label="Transport" value={catCounts["Transport"]||0} color="var(--purple)" icon={<Truck size={18}/>} delay={150}/>
+</div>
 
     {/* Search + filter + add */}
     <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:18}}>
@@ -2298,12 +2331,12 @@ function ArtistsView({role}){
   };
   const safeLink=url=>{if(!url)return"";return url.startsWith("http")?url:"https://"+url;};
   return(<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎤" delay={0}/>
-      <SC2 label="Singers" value={allArtists.filter(a=>a.category==="Singer").length} color="var(--purple)" icon="🎵" delay={50}/>
-      <SC2 label="Actors" value={allArtists.filter(a=>a.category==="Actor").length} color="var(--accent)" icon="🎭" delay={100}/>
-      <SC2 label="Models" value={allArtists.filter(a=>a.category==="Model").length} color="var(--teal)" icon="📸" delay={150}/>
-    </div>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
+  <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon={<Mic2 size={18}/>} delay={0}/>
+  <SC2 label="Singers" value={allArtists.filter(a=>a.category==="Singer").length} color="var(--purple)" icon={<Music4 size={18}/>} delay={50}/>
+  <SC2 label="Actors" value={allArtists.filter(a=>a.category==="Actor").length} color="var(--accent)" icon={<Drama size={18}/>} delay={100}/>
+  <SC2 label="Models" value={allArtists.filter(a=>a.category==="Model").length} color="var(--teal)" icon={<Camera size={18}/>} delay={150}/>
+</div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       <Inp value={search} onChange={setSearch} placeholder="Search artist…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
