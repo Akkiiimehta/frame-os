@@ -419,9 +419,7 @@ function parseCSVText(text) {
   };
   // NAME ALIASES used to detect the real header row (skips preamble rows)
   const NAME_ALIASES = ["name","fullname","artistname","crewname","talent","membername","artistfullname"];
-  const lines = text.split(/
-?
-/);
+  const lines = text.replace(/\r/g, "").split("\n");
   if (lines.length < 2) return { headers: [], rows: [] };
   // Scan up to 20 lines to find the real header row
   let headerLineIdx = 0;
