@@ -402,6 +402,27 @@ function exportProject(project, crew){
   URL.revokeObjectURL(url);
 }
 
+/* ── XLSX EXPORT UTILITY ── */
+function exportToXLSX(rows, filename) {
+  if (!rows || !rows.length) { alert("No data to export"); return; }
+  // Load SheetJS from CDN dynamically
+  const doExport = (XLSX) => {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Auto column widths
+    const cols = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, ...rows.map(r => String(r[k] || "").length)) + 2 }));
+    ws["!cols"] = cols;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, filename.slice(0, 31));
+    XLSX.writeFile(wb, filename + ".xlsx");
+  };
+  if (window.XLSX) { doExport(window.XLSX); return; }
+  const script = document.createElement("script");
+  script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  script.onload = () => doExport(window.XLSX);
+  script.onerror = () => alert("Could not load Excel library. Check your connection.");
+  document.head.appendChild(script);
+}
+
 /* ── CSV IMPORT UTILITIES ── */
 function parseCSVText(text) {
   // Proper CSV parser that handles quoted fields containing embedded newlines
@@ -1600,7 +1621,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       <Inp value={search} onChange={setSearch} placeholder="Search name or role…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All","Director","DOP","Producer","AD","Editor","Gaffer","Other"].map(r=><button key={r} className={`fpill${filterR===r?" active":""}`} onClick={()=>setFilterR(r)}>{r}</button>)}</div>
-      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-g" onClick={()=>setShowImportCrew(true)}>📥 Import CSV</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
+      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-g" onClick={()=>setShowImportCrew(true)}>📥 Import CSV</button><button className="btn-g" style={{color:"var(--green)",borderColor:"rgba(48,209,88,.25)"}} onClick={()=>exportToXLSX(allCrew.map(c=>({Name:c.name,Role:c.role,Phone:c.phone,Email:c.email,Location:c.location,Tags:(c.tags||[]).join(", "),Notes:c.notes||""})),"Crew_Export")}>📊 Export XLSX</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
     </div>
     {toast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"var(--bg2)",border:"1px solid var(--green)",borderRadius:10,padding:"10px 20px",fontSize:13,color:"var(--green)",zIndex:999,boxShadow:"0 8px 32px rgba(0,0,0,.4)",animation:"fadeUp .25s ease",pointerEvents:"none"}}>{toast}</div>}
     {showImportCrew&&<CSVImportModal title="Import Crew from CSV" type="crew" onClose={()=>setShowImportCrew(false)} onImport={doImportCrew} existingNames={allCrew.map(c=>c.name)}/>}
@@ -1829,6 +1850,7 @@ function VendorsView({allVendors,setAllVendors,role}){
         {["All",...CATEGORIES].map(c=><button key={c} className={`fpill${categoryFilter===c?" active":""}`} onClick={()=>setCategoryFilter(c)}>{c}</button>)}
       </div>
       <div style={{flex:1}}/>
+      {isAdmin&&<button className="btn-g" style={{color:"var(--green)",borderColor:"rgba(48,209,88,.25)"}} onClick={()=>exportToXLSX(allVendors.map(v=>({Name:v.name,Category:v.category,"Contact Person":v.contact,Phone:v.phone,Email:v.email,Location:v.location,"Rate/Budget":v.rate,Notes:v.notes||""})),"Vendors_Export")}>📊 Export XLSX</button>}
       {isAdmin&&<button className="btn-p" onClick={openAdd}>+ Add Vendor</button>}
     </div>
 
