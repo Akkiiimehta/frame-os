@@ -1,5 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./lib/supabase";
+import {
+  FolderKanban, Wallet, Building2, Users2, Camera, Clapperboard,
+  FileText, UserCircle2, Search, Sun, Moon, Lock, LogOut,
+  ChevronLeft, ChevronRight, ReceiptText, Folder,
+  Phone, Mail, Globe, Instagram, Linkedin, Pencil,
+  LayoutGrid
+} from "lucide-react";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');`;
 
@@ -810,72 +817,74 @@ function ErrScreen({msg}){return<div style={{minHeight:"100vh",background:"var(-
 const GS=`
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#111113;--bg2:#18181b;--bg3:#1c1c1f;--bg4:#242428;
-  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.13);
-  --text:#f2f2f7;--text2:#8e8e93;--text3:#48484a;
-  --accent:#3a8ef6;--accent-bg:rgba(58,142,246,0.12);--accent-bd:rgba(58,142,246,0.25);
-  --green:#30d158;--green-bg:rgba(48,209,88,0.1);
-  --amber:#ffd60a;--amber-bg:rgba(255,214,10,0.1);
-  --red:#ff453a;--red-bg:rgba(255,69,58,0.1);
-  --purple:#bf5af2;--purple-bg:rgba(191,90,242,0.1);
-  --teal:#5ac8fa;--teal-bg:rgba(90,200,250,0.1);
-  --orange:#ff9f0a;--orange-bg:rgba(255,159,10,0.1);
-  --radius:12px;--header-h:52px;--bottom-h:62px;
-  --panel-bg:#14141a;--header-glass:rgba(14,14,16,0.9);--modal-bg:#1a1a1e;--sidebar-bg:rgba(14,14,16,0.96);
+  --bg:#0e0e10;--bg2:#161618;--bg3:#1c1c1f;--bg4:#242428;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0f0f5;--text2:#8e8e99;--text3:#44444a;
+  --accent:#3a8ef6;--accent-bg:rgba(58,142,246,0.1);--accent-bd:rgba(58,142,246,0.22);
+  --green:#30d158;--green-bg:rgba(48,209,88,0.08);
+  --amber:#ffd60a;--amber-bg:rgba(255,214,10,0.08);
+  --red:#ff453a;--red-bg:rgba(255,69,58,0.08);
+  --purple:#bf5af2;--purple-bg:rgba(191,90,242,0.08);
+  --teal:#5ac8fa;--teal-bg:rgba(90,200,250,0.08);
+  --orange:#ff9f0a;--orange-bg:rgba(255,159,10,0.08);
+  --radius:12px;--header-h:50px;--bottom-h:60px;
+  --panel-bg:#111114;--header-glass:rgba(10,10,12,0.88);--modal-bg:#18181c;--sidebar-bg:rgba(10,10,12,0.95);
 }
 body.light{
-  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeece8;--bg4:#e5e2dc;
-  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.14);
-  --text:#1a1a1a;--text2:#5a5a5a;--text3:#a0a0a0;
-  --accent:#1a56db;--accent-bg:rgba(26,86,219,0.08);--accent-bd:rgba(26,86,219,0.2);
-  --green:#0d7a4e;--green-bg:rgba(13,122,78,0.08);
-  --amber:#b45309;--amber-bg:rgba(180,83,9,0.08);
-  --red:#c0392b;--red-bg:rgba(192,57,43,0.08);
-  --purple:#7c3aed;--purple-bg:rgba(124,58,237,0.08);
-  --teal:#0891b2;--teal-bg:rgba(8,145,178,0.08);
-  --orange:#c2410c;--orange-bg:rgba(194,65,12,0.08);
-  --panel-bg:#faf9f6;--header-glass:rgba(245,244,240,0.92);--modal-bg:#ffffff;--sidebar-bg:rgba(245,244,240,0.97);
+  --bg:#f4f3ef;--bg2:#ffffff;--bg3:#eceae5;--bg4:#e2e0da;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.13);
+  --text:#141414;--text2:#555560;--text3:#9e9ea8;
+  --accent:#1a56db;--accent-bg:rgba(26,86,219,0.07);--accent-bd:rgba(26,86,219,0.18);
+  --green:#0d7a4e;--green-bg:rgba(13,122,78,0.07);
+  --amber:#b45309;--amber-bg:rgba(180,83,9,0.07);
+  --red:#c0392b;--red-bg:rgba(192,57,43,0.07);
+  --purple:#7c3aed;--purple-bg:rgba(124,58,237,0.07);
+  --teal:#0891b2;--teal-bg:rgba(8,145,178,0.07);
+  --orange:#c2410c;--orange-bg:rgba(194,65,12,0.07);
+  --panel-bg:#fafaf7;--header-glass:rgba(244,243,239,0.92);--modal-bg:#ffffff;--sidebar-bg:rgba(244,243,239,0.97);
 }
-body.light .card.clickable:hover{box-shadow:0 8px 32px rgba(0,0,0,.12);}
-body.light .row-h:hover{background:rgba(0,0,0,.025);}
+body.light .card.clickable:hover{box-shadow:0 6px 24px rgba(0,0,0,.09);}
+body.light .row-h:hover{background:rgba(0,0,0,.02);}
 body.light input[type=date].input{color-scheme:light;}
-html,body{background:var(--bg);color:var(--text);font-family:'Geist',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+html,body{background:var(--bg);color:var(--text);font-family:'Geist',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes scaleIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
 @keyframes slideRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-.fade-up{animation:fadeUp .35s cubic-bezier(.32,.72,0,1) both;}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);transition:box-shadow .2s,border-color .2s,transform .2s;}
-.card.clickable{cursor:pointer;}.card.clickable:hover{border-color:var(--border2);box-shadow:0 8px 32px rgba(0,0,0,.45);transform:translateY(-2px);}
-.nav-s{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--text2);border:none;background:none;width:100%;text-align:left;}
-.nav-s:hover{background:var(--bg4);color:var(--text);}.nav-s.active{background:var(--bg4);color:var(--text);}
-.input{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'Geist',sans-serif;font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s;}
-.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(58,142,246,.12);}.input::placeholder{color:var(--text3);}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.fade-up{animation:fadeUp .3s cubic-bezier(.32,.72,0,1) both;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);transition:box-shadow .2s,border-color .2s,transform .18s;}
+.card.clickable{cursor:pointer;}.card.clickable:hover{border-color:var(--border2);box-shadow:0 6px 28px rgba(0,0,0,.4);transform:translateY(-1px);}
+.nav-s{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .12s;white-space:nowrap;overflow:hidden;color:var(--text2);border:none;background:none;width:100%;text-align:left;}
+.nav-s:hover{background:var(--bg3);}.nav-s.active{background:var(--bg3);}
+.input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Geist',sans-serif;font-size:13px;letter-spacing:-0.01em;padding:8px 11px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s;}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(58,142,246,.1);}.input::placeholder{color:var(--text3);}
 select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.input{resize:vertical;min-height:72px;line-height:1.6;}
-.btn-p{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 18px;font-family:'Geist',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,transform .15s;white-space:nowrap;}
+.btn-p{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-family:'Geist',sans-serif;font-size:13px;font-weight:500;letter-spacing:-0.01em;cursor:pointer;transition:filter .15s,transform .1s;white-space:nowrap;}
 .btn-p:hover{filter:brightness(1.1);}.btn-p:active{transform:scale(.98);}
-.btn-g{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:9px;padding:7px 16px;font-family:'Geist',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+.btn-g{background:var(--bg4);color:var(--text2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-family:'Geist',sans-serif;font-size:13px;font-weight:400;letter-spacing:-0.01em;cursor:pointer;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;}
 .btn-g:hover{background:var(--bg3);color:var(--text);}
-.btn-sm{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;font-family:'Geist',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn-sm{background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:4px 11px;font-family:'Geist',sans-serif;font-size:12px;font-weight:400;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:-0.01em;}
 .btn-sm:hover{border-color:var(--green);color:var(--green);background:var(--green-bg);}
-.fpill{border-radius:20px;padding:4px 14px;font-size:12px;font-family:'Geist Mono',monospace;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap;}
+.fpill{border-radius:20px;padding:4px 13px;font-size:11px;font-family:'Geist Mono',monospace;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s;white-space:nowrap;letter-spacing:0.02em;}
 .fpill.active{background:var(--bg4);color:var(--text);border-color:var(--border2);}.fpill:hover:not(.active){background:var(--bg3);}
-.row-h{transition:background .12s;}.row-h:hover{background:rgba(255,255,255,.025);}
-.ovl{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .18s ease;}
-.mbox{background:var(--modal-bg);border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:scaleIn .22s cubic-bezier(.32,.72,0,1);}
-.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
-.povl{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:150;animation:fadeIn .2s ease;}
-.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:#14141a;border-left:1px solid var(--border2);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .28s cubic-bezier(.32,.72,0,1);}
-.cs-ovl{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);z-index:168;animation:fadeIn .2s ease;}
+.row-h{transition:background .1s;}.row-h:hover{background:rgba(255,255,255,.02);}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease;}
+.mbox{background:var(--modal-bg);border:1px solid var(--border2);border-radius:14px;padding:26px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:scaleIn .18s cubic-bezier(.32,.72,0,1);}
+.panel{position:fixed;top:0;right:0;bottom:0;width:500px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border);z-index:160;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .24s cubic-bezier(.32,.72,0,1);}
+.povl{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:150;animation:fadeIn .18s ease;}
+.cs-panel{position:fixed;top:0;right:0;bottom:0;width:540px;max-width:100vw;background:var(--panel-bg);border-left:1px solid var(--border);z-index:172;overflow-y:auto;display:flex;flex-direction:column;animation:slideRight .24s cubic-bezier(.32,.72,0,1);}
+.cs-ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(5px);z-index:168;animation:fadeIn .18s ease;}
 .ps{padding:20px 26px;border-bottom:1px solid var(--border);}.ps:last-child{border-bottom:none;}
-.drow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}.drow:last-child{border-bottom:none;}
-.tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'Geist Mono',monospace;background:var(--bg4);color:var(--text2);border-radius:6px;padding:2px 8px;border:1px solid var(--border);}
+.drow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}.drow:last-child{border-bottom:none;}
+.sect-label{font-size:10px;color:var(--text3);font-family:'Geist Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;}
+.tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:'Geist Mono',monospace;background:var(--bg4);color:var(--text2);border-radius:5px;padding:2px 8px;border:1px solid var(--border);}
 .tchip .del{cursor:pointer;font-size:10px;color:var(--text3);transition:color .12s;}.tchip .del:hover{color:var(--red);}
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(10,10,14,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
-.bni{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;height:100%;border:none;background:none;cursor:pointer;padding:6px 2px;}
-.bni-ic{font-size:20px;line-height:1;}.bni-lb{font-size:9px;font-family:'Geist Mono',monospace;color:var(--text3);letter-spacing:0.03em;text-transform:uppercase;}
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:rgba(8,8,11,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);height:var(--bottom-h);padding-bottom:env(safe-area-inset-bottom,0px);}
+.bni{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;height:100%;border:none;background:none;cursor:pointer;padding:6px 2px;}
+.bni-ic{display:flex;align-items:center;justify-content:center;line-height:1;}
+.bni-lb{font-size:9px;font-family:'Geist Mono',monospace;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;}
 .bni.active .bni-lb{color:var(--accent);}
 @media(max-width:768px){
   .sd{display:none!important;}.bnav{display:flex;}
@@ -891,8 +900,7 @@ select.input{cursor:pointer;}input[type=date].input{color-scheme:dark;}textarea.
   .hmob{display:none!important;}
 }
 @media(max-width:480px){.g4{grid-template-columns:1fr 1fr!important;}.g3{grid-template-columns:1fr!important;}}
-`;
-
+`
 const SC={"Pre-Production":{dot:"var(--teal)",bg:"var(--teal-bg)",bd:"rgba(90,200,250,.2)"},"In Production":{dot:"var(--accent)",bg:"var(--accent-bg)",bd:"var(--accent-bd)"},"Post":{dot:"var(--purple)",bg:"var(--purple-bg)",bd:"rgba(191,90,242,.2)"},"Delivered":{dot:"var(--green)",bg:"var(--green-bg)",bd:"rgba(48,209,88,.2)"},"On Hold":{dot:"var(--red)",bg:"var(--red-bg)",bd:"rgba(255,69,58,.2)"},"Pending":{dot:"var(--amber)",bg:"var(--amber-bg)",bd:"rgba(255,214,10,.2)"},"Partial":{dot:"var(--orange)",bg:"var(--orange-bg)",bd:"rgba(255,159,10,.2)"},"Paid":{dot:"var(--green)",bg:"var(--green-bg)",bd:"rgba(48,209,88,.2)"},"Overdue":{dot:"var(--red)",bg:"var(--red-bg)",bd:"rgba(255,69,58,.2)"},"Draft":{dot:"var(--text3)",bg:"rgba(72,72,74,.2)",bd:"rgba(72,72,74,.3)"},"Sent":{dot:"var(--accent)",bg:"var(--accent-bg)",bd:"var(--accent-bd)"},"Approved":{dot:"var(--green)",bg:"var(--green-bg)",bd:"rgba(48,209,88,.2)"}};
 const INV_ST=["Pending","Partial","Paid","Overdue"];
 const PROJ_ST=["Pre-Production","In Production","Post","Delivered","On Hold"];
@@ -1946,33 +1954,82 @@ function VendorsView({allVendors,setAllVendors,role}){
 }
 
 /* ── NAV ARRAYS ── */
-const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"vendors",label:"Vendors",icon:"🏭",sub:"Vendors & suppliers"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
-const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_A=[{id:"projects",label:"Projects",Icon:FolderKanban,sub:"Shoots & pipeline"},{id:"finance",label:"Finance",Icon:Wallet,sub:"Invoices & revenue"},{id:"clients",label:"Clients",Icon:Building2,sub:"Client directory"},{id:"crew",label:"Crew",Icon:Users2,sub:"Cast & crew"},{id:"vendors",label:"Vendors",Icon:Camera,sub:"Vendors & suppliers"},{id:"artists",label:"Artists",Icon:Clapperboard,sub:"Talent & performers"},{id:"quotes",label:"Quotes",Icon:FileText,sub:"Estimates & quotes"},{id:"about",label:"About",Icon:UserCircle2,sub:"Profile & studio"}];
+const NAV_V=[{id:"projects",label:"Projects",Icon:FolderKanban,sub:"Shoots & pipeline"},{id:"clients",label:"Clients",Icon:Building2,sub:"Client directory"},{id:"crew",label:"Crew",Icon:Users2,sub:"Cast & crew"},{id:"artists",label:"Artists",Icon:Clapperboard,sub:"Talent & performers"},{id:"about",label:"About",Icon:UserCircle2,sub:"Profile & studio"}];
 
 /* ── SIDEBAR ── */
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
-  const isAdmin=role==="admin";const W=collapsed?60:220;const NAV=isAdmin?NAV_A:NAV_V;
+  const isAdmin=role==="admin";const W=collapsed?64:224;const NAV=isAdmin?NAV_A:NAV_V;
   const[editName,setEditName]=useState(false);const[draft,setDraft]=useState(studioName);const nameRef=useRef();
   useEffect(()=>{if(editName&&nameRef.current)nameRef.current.focus();},[editName]);
   const commitName=()=>{const t=draft.trim();if(t)setStudioName(t);else setDraft(studioName);setEditName(false);};
-  return(<nav className="sd" style={{width:W,minHeight:"100vh",position:"fixed",top:0,left:0,zIndex:50,background:"var(--sidebar-bg)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",paddingBottom:20,transition:"width .25s cubic-bezier(.32,.72,0,1)",overflow:"hidden"}}>
-    <div style={{padding:collapsed?"18px 0":"20px 16px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:10}}>
+  return(<nav className="sd" style={{width:W,minHeight:"100vh",position:"fixed",top:0,left:0,zIndex:50,background:"var(--sidebar-bg)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",paddingBottom:20,transition:"width .25s cubic-bezier(.32,.72,0,1)",overflow:"hidden"}}>
+    {/* Logo / Studio header */}
+    <div style={{padding:collapsed?"16px 0":"18px 16px 16px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,minHeight:60}}>
       {!collapsed&&<div style={{display:"flex",alignItems:"center",gap:10,overflow:"hidden",flex:1,minWidth:0}}>
-        <div style={{width:32,height:32,borderRadius:9,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎞</div>
+        <div style={{width:30,height:30,borderRadius:8,background:"var(--accent)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <Clapperboard size={15} color="#fff" strokeWidth={2}/>
+        </div>
         <div style={{overflow:"hidden",flex:1,minWidth:0}}>
-          {editName&&isAdmin?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:15,fontWeight:700,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>:<div style={{display:"flex",alignItems:"center",gap:4,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}}><div style={{fontSize:15,fontWeight:700,color:"var(--text)",lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{studioName}</div>{isAdmin&&<span style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>✎</span>}</div>}
-          <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",marginTop:2,whiteSpace:"nowrap"}}>PRODUCTION</div>
+          {editName&&isAdmin
+            ?<input ref={nameRef} value={draft} onChange={e=>setDraft(e.target.value)} onBlur={commitName} onKeyDown={e=>{if(e.key==="Enter")commitName();if(e.key==="Escape"){setDraft(studioName);setEditName(false);}}} style={{background:"transparent",border:"none",borderBottom:"1px solid var(--accent)",outline:"none",color:"var(--text)",fontFamily:"'Geist',sans-serif",fontSize:14,fontWeight:600,lineHeight:1,width:"100%",padding:"0 0 2px"}}/>
+            :<div style={{display:"flex",alignItems:"center",gap:5,cursor:isAdmin?"pointer":"default"}} onClick={()=>{if(isAdmin){setDraft(studioName);setEditName(true);}}}>
+              <div style={{fontSize:14,fontWeight:600,color:"var(--text)",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:"-0.01em"}}>{studioName}</div>
+              {isAdmin&&<Pencil size={10} color="var(--text3)" style={{flexShrink:0}}/>}
+            </div>
+          }
+          <div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.12em",marginTop:3,whiteSpace:"nowrap",textTransform:"uppercase"}}>Studio</div>
         </div>
       </div>}
-      {collapsed&&<div style={{width:32,height:32,borderRadius:9,background:"var(--bg4)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🎞</div>}
-      {isAdmin&&<button onClick={()=>setCollapsed(c=>!c)} style={{background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text2)",width:26,height:26,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{collapsed?"›":"‹"}</button>}
+      {collapsed&&<div style={{width:30,height:30,borderRadius:8,background:"var(--accent)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <Clapperboard size={15} color="#fff" strokeWidth={2}/>
+      </div>}
+      {isAdmin&&<button onClick={()=>setCollapsed(c=>!c)} style={{background:"transparent",border:"1px solid var(--border)",borderRadius:6,color:"var(--text3)",width:24,height:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+        {collapsed?<ChevronRight size={13}/>:<ChevronLeft size={13}/>}
+      </button>}
     </div>
-    <div style={{flex:1,padding:collapsed?"12px 8px":"14px 10px"}}>
-      {!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>WORKSPACE</div>}
-      {NAV.map(n=>{const act=tab===n.id;return <button key={n.id} className={`nav-s${act?" active":""}`} onClick={()=>setTab(n.id)} title={collapsed?n.label:""} style={{justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px",marginBottom:2,position:"relative"}}>{act&&!collapsed&&<span style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:2.5,borderRadius:3,background:"var(--accent)"}}/>}<span style={{fontSize:17,flexShrink:0,lineHeight:1}}>{n.icon}</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:act?600:400,lineHeight:1.2,color:act?"var(--text)":"var(--text2)",whiteSpace:"nowrap"}}>{n.label}</div><div style={{fontSize:11,color:"var(--text3)",marginTop:1,whiteSpace:"nowrap"}}>{n.sub}</div></div>}</button>;})}
-      {isAdmin&&<><div style={{borderTop:"1px solid var(--border)",margin:"14px 0 10px"}}/>{!collapsed&&<div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.1em",padding:"0 8px",marginBottom:8}}>COMING SOON</div>}<div className="nav-s" style={{opacity:.35,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px":"8px 10px"}}><span style={{fontSize:17,flexShrink:0,lineHeight:1}}>📁</span>{!collapsed&&<div style={{overflow:"hidden"}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap"}}>Assets</div><div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.06em",marginTop:1}}>SOON</div></div>}</div></>}
+    {/* Nav items */}
+    <div style={{flex:1,padding:collapsed?"10px 8px":"12px 8px",overflowY:"auto"}}>
+      {!collapsed&&<div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.12em",padding:"0 8px",marginBottom:6,textTransform:"uppercase"}}>Workspace</div>}
+      {NAV.map(n=>{const act=tab===n.id;const{Icon}=n;return(
+        <button key={n.id} className={`nav-s${act?" active":""}`} onClick={()=>setTab(n.id)} title={collapsed?n.label:""} style={{justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px 0":"7px 8px",marginBottom:1,position:"relative",width:"100%",gap:collapsed?0:10}}>
+          {act&&!collapsed&&<span style={{position:"absolute",left:0,top:"18%",bottom:"18%",width:2,borderRadius:2,background:"var(--accent)"}}/>}
+          <span style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:act?"var(--accent)":"var(--text3)",transition:"color .15s"}}>
+            <Icon size={17} strokeWidth={act?2:1.75}/>
+          </span>
+          {!collapsed&&<div style={{overflow:"hidden",flex:1}}>
+            <div style={{fontSize:13,fontWeight:act?500:400,lineHeight:1.25,color:act?"var(--text)":"var(--text2)",whiteSpace:"nowrap",letterSpacing:"-0.01em"}}>{n.label}</div>
+          </div>}
+        </button>
+      );})}
+      {isAdmin&&<>
+        <div style={{borderTop:"1px solid var(--border)",margin:"10px 0 8px"}}/>
+        {!collapsed&&<div style={{fontSize:10,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.12em",padding:"0 8px",marginBottom:6,textTransform:"uppercase"}}>Soon</div>}
+        <div className="nav-s" style={{opacity:.3,cursor:"not-allowed",justifyContent:collapsed?"center":"flex-start",padding:collapsed?"10px 0":"7px 8px",gap:collapsed?0:10}}>
+          <span style={{display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Folder size={17} strokeWidth={1.75} color="var(--text3)"/></span>
+          {!collapsed&&<div style={{overflow:"hidden",flex:1}}><div style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap",letterSpacing:"-0.01em"}}>Assets</div></div>}
+        </div>
+      </>}
     </div>
-    {!collapsed?<div style={{padding:"0 10px"}}><div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:11,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}><div style={{width:28,height:28,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",flexShrink:0}}>{isAdmin?"A":"V"}</div><div style={{overflow:"hidden"}}><div style={{fontSize:13,fontWeight:600,color:"var(--text)",whiteSpace:"nowrap"}}>{isAdmin?"Aki Mehta":"Viewer"}</div><div style={{fontSize:11,color:"var(--text3)",whiteSpace:"nowrap"}}>{isAdmin?"Admin · Full access":"Read only"}</div></div></div></div>:<div style={{display:"flex",justifyContent:"center",padding:"0 0 4px"}}><div style={{width:32,height:32,borderRadius:"50%",background:isAdmin?"#1d3461":"#1a3a20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isAdmin?"#60a0f8":"#4ade96",cursor:"default"}}>{isAdmin?"A":"V"}</div></div>}
+    {/* User pill */}
+    {!collapsed
+      ?<div style={{padding:"0 8px"}}>
+        <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 10px",display:"flex",alignItems:"center",gap:9}}>
+          <div style={{width:26,height:26,borderRadius:7,background:isAdmin?"rgba(58,142,246,0.18)":"rgba(48,209,88,0.12)",border:`1px solid ${isAdmin?"rgba(58,142,246,0.25)":"rgba(48,209,88,0.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <span style={{fontSize:11,fontWeight:700,color:isAdmin?"var(--accent)":"var(--green)",fontFamily:"'Geist Mono',monospace"}}>{isAdmin?"A":"V"}</span>
+          </div>
+          <div style={{overflow:"hidden",flex:1}}>
+            <div style={{fontSize:12,fontWeight:500,color:"var(--text)",whiteSpace:"nowrap",letterSpacing:"-0.01em"}}>{isAdmin?"Aki Mehta":"Viewer"}</div>
+            <div style={{fontSize:10,color:"var(--text3)",whiteSpace:"nowrap",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.04em"}}>{isAdmin?"Admin":"Read only"}</div>
+          </div>
+        </div>
+      </div>
+      :<div style={{display:"flex",justifyContent:"center",padding:"0 0 4px"}}>
+        <div style={{width:28,height:28,borderRadius:8,background:isAdmin?"rgba(58,142,246,0.18)":"rgba(48,209,88,0.12)",border:`1px solid ${isAdmin?"rgba(58,142,246,0.25)":"rgba(48,209,88,0.2)"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <span style={{fontSize:11,fontWeight:700,color:isAdmin?"var(--accent)":"var(--green)",fontFamily:"'Geist Mono',monospace"}}>{isAdmin?"A":"V"}</span>
+        </div>
+      </div>
+    }
   </nav>);
 }
 
@@ -2021,8 +2078,8 @@ function AboutView({role}){
         {editing?<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="g2"><div><Lbl ch="Phone"/><Inp value={draft.phone} onChange={ds("phone")} placeholder="+91 98765 43210"/></div><div><Lbl ch="Email"/><Inp value={draft.email} onChange={ds("email")} placeholder="email@example.com"/></div></div>
           <div><Lbl ch="Website"/><Inp value={draft.website} onChange={ds("website")} placeholder="yoursite.com"/></div>
-        </div>:<div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {[["📞",about.phone],["✉",about.email],["🌐",about.website]].filter(([,v])=>v).map(([icon,val])=><div key={val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",borderRadius:9}}><span style={{fontSize:16,flexShrink:0}}>{icon}</span><span style={{fontSize:13,color:"var(--text)"}}>{val}</span></div>)}
+        </div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[[Phone,about.phone],[Mail,about.email],[Globe,about.website]].filter(([,v])=>v).map(([Icon,val])=><div key={val} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"var(--bg3)",borderRadius:9}}><Icon size={15} strokeWidth={1.75} color="var(--text3)" style={{flexShrink:0}}/><span style={{fontSize:13,color:"var(--text)"}}>{val}</span></div>)}
         </div>}
       </div>
       <div className="card fade-up" style={{padding:"24px 28px",marginBottom:16,animationDelay:"120ms"}}>
@@ -2255,6 +2312,8 @@ function ArtistsView({role}){
 }
 
 /* ── GLOBAL SEARCH ── */
+const SEARCH_NAV_ICONS={projects:FolderKanban,finance:Wallet,clients:Building2,crew:Users2,vendors:Camera,artists:Clapperboard};
+const SEARCH_TYPE_ICONS={project:FolderKanban,crew:Users2,vendor:Camera,artist:Clapperboard,invoice:Wallet};
 function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose}){
   const[q,setQ]=useState("");const inputRef=useRef();const listRef=useRef();const[sel,setSel]=useState(0);
   useEffect(()=>{if(inputRef.current)inputRef.current.focus();},[]);
@@ -2263,11 +2322,11 @@ function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose
     const s=q.trim().toLowerCase();
     if(!s)return[];
     const out=[];
-    (projects||[]).forEach(p=>{if([p.title,p.client,p.type,p.status,p.location,...(p.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"project",icon:"🎬",label:p.title,sub:`${p.client} · ${p.status}`,tab:"projects",id:p.id});});
-    (crew||[]).forEach(c=>{if([c.name,c.role,c.email,c.phone,c.location,...(c.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"crew",icon:"👥",label:c.name,sub:`${c.role}${c.location?" · "+c.location:""}`,tab:"crew",id:c.id});});
-    (vendors||[]).forEach(v=>{if([v.name,v.category,v.contact,v.phone,v.email,v.location].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"vendor",icon:"🏭",label:v.name,sub:`${v.category}${v.location?" · "+v.location:""}`,tab:"vendors",id:v.id});});
-    (artists||[]).forEach(a=>{if([a.name,a.category,a.phone,a.email,a.location,...(a.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"artist",icon:"🎤",label:a.name,sub:`${a.category}${a.location?" · "+a.location:""}`,tab:"artists",id:a.id});});
-    (invoices||[]).forEach(i=>{if([i.invoiceNo,i.project,i.client,i.status].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"invoice",icon:"₹",label:i.invoiceNo||i.project,sub:`${i.client} · ${i.status} · ${fmt(i.amount)}`,tab:"finance",id:i.id});});
+    (projects||[]).forEach(p=>{if([p.title,p.client,p.type,p.status,p.location,...(p.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"project",label:p.title,sub:`${p.client} · ${p.status}`,tab:"projects",id:p.id});});
+    (crew||[]).forEach(c=>{if([c.name,c.role,c.email,c.phone,c.location,...(c.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"crew",label:c.name,sub:`${c.role}${c.location?" · "+c.location:""}`,tab:"crew",id:c.id});});
+    (vendors||[]).forEach(v=>{if([v.name,v.category,v.contact,v.phone,v.email,v.location].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"vendor",label:v.name,sub:`${v.category}${v.location?" · "+v.location:""}`,tab:"vendors",id:v.id});});
+    (artists||[]).forEach(a=>{if([a.name,a.category,a.phone,a.email,a.location,...(a.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"artist",label:a.name,sub:`${a.category}${a.location?" · "+a.location:""}`,tab:"artists",id:a.id});});
+    (invoices||[]).forEach(i=>{if([i.invoiceNo,i.project,i.client,i.status].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"invoice",label:i.invoiceNo||i.project,sub:`${i.client} · ${i.status} · ${fmt(i.amount)}`,tab:"finance",id:i.id});});
     return out.slice(0,12);
   },[q,projects,crew,vendors,artists,invoices]);
 
@@ -2290,33 +2349,42 @@ function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose
   };
 
   const typeColors={project:"var(--teal)",crew:"var(--accent)",vendor:"var(--orange)",artist:"var(--purple)",invoice:"var(--green)"};
+  const typeLabels={project:"Projects",crew:"Crew",vendor:"Vendors",artist:"Artists",invoice:"Invoices"};
+  const quickNavItems=[
+    {Icon:FolderKanban,label:"Projects",tab:"projects"},
+    {Icon:Wallet,label:"Finance",tab:"finance"},
+    {Icon:Building2,label:"Clients",tab:"clients"},
+    {Icon:Users2,label:"Crew",tab:"crew"},
+    {Icon:Camera,label:"Vendors",tab:"vendors"},
+    {Icon:Clapperboard,label:"Artists",tab:"artists"},
+  ];
 
   return(
-    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:"13vh"}} onClick={onClose}>
-      <div style={{width:"min(620px,92vw)",background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:18,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.7)",animation:"scaleIn .15s cubic-bezier(.32,.72,0,1)"}} onClick={e=>e.stopPropagation()}>
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(8px)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:"13vh"}} onClick={onClose}>
+      <div style={{width:"min(620px,92vw)",background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:16,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.7)",animation:"scaleIn .15s cubic-bezier(.32,.72,0,1)"}} onClick={e=>e.stopPropagation()}>
         {/* Search input */}
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 18px",borderBottom:"1px solid var(--border)"}}>
-          <span style={{fontSize:18,opacity:.4}}>🔍</span>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",borderBottom:"1px solid var(--border)"}}>
+          <Search size={16} strokeWidth={2} color="var(--text3)" style={{flexShrink:0}}/>
           <input
             ref={inputRef}
             value={q}
             onChange={e=>setQ(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Search projects, crew, vendors, artists, invoices…"
-            style={{flex:1,background:"transparent",border:"none",outline:"none",color:"var(--text)",fontSize:15,fontFamily:"'Geist',sans-serif"}}
+            style={{flex:1,background:"transparent",border:"none",outline:"none",color:"var(--text)",fontSize:14,fontFamily:"'Geist',sans-serif",letterSpacing:"-0.01em"}}
           />
-          {q&&<button onClick={()=>setQ("")} style={{background:"var(--bg4)",border:"none",borderRadius:6,color:"var(--text3)",cursor:"pointer",fontSize:12,padding:"2px 7px",lineHeight:1.5}}>✕</button>}
-          <kbd style={{fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg4)",border:"1px solid var(--border2)",borderRadius:5,padding:"2px 7px"}}>ESC</kbd>
+          {q&&<button onClick={()=>setQ("")} style={{background:"var(--bg4)",border:"none",borderRadius:5,color:"var(--text3)",cursor:"pointer",fontSize:11,padding:"2px 6px",lineHeight:1.5,fontFamily:"'Geist Mono',monospace"}}>ESC</button>}
+          {!q&&<kbd style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg4)",border:"1px solid var(--border2)",borderRadius:5,padding:"2px 7px",flexShrink:0}}>ESC</kbd>}
         </div>
         {/* Results */}
         <div ref={listRef} style={{maxHeight:380,overflowY:"auto"}}>
           {!q.trim()&&(
-            <div style={{padding:"20px 18px",display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Quick navigate</div>
-              {[{icon:"🎬",label:"Projects",tab:"projects"},{icon:"₹",label:"Finance",tab:"finance"},{icon:"🏢",label:"Clients",tab:"clients"},{icon:"👥",label:"Crew",tab:"crew"},{icon:"🏭",label:"Vendors",tab:"vendors"},{icon:"🎤",label:"Artists",tab:"artists"}].map(n=>(
-                <div key={n.tab} onClick={()=>{onNavigate(n.tab);onClose();}} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 10px",borderRadius:10,cursor:"pointer",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg4)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                  <span style={{fontSize:16}}>{n.icon}</span>
-                  <span style={{fontSize:14,color:"var(--text2)"}}>{n.label}</span>
+            <div style={{padding:"16px 10px"}}>
+              <div style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",padding:"0 8px",marginBottom:8}}>Quick navigate</div>
+              {quickNavItems.map(n=>(
+                <div key={n.tab} onClick={()=>{onNavigate(n.tab);onClose();}} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 8px",borderRadius:8,cursor:"pointer",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg4)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <n.Icon size={15} strokeWidth={1.75} color="var(--text3)"/>
+                  <span style={{fontSize:13,color:"var(--text2)",letterSpacing:"-0.01em"}}>{n.label}</span>
                   <span style={{marginLeft:"auto",fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↵</span>
                 </div>
               ))}
@@ -2324,33 +2392,34 @@ function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose
           )}
           {q.trim()&&results.length===0&&(
             <div style={{padding:"36px 18px",textAlign:"center"}}>
-              <div style={{fontSize:26,marginBottom:10}}>🔭</div>
-              <div style={{fontSize:14,color:"var(--text2)"}}>No results for "<b>{q}</b>"</div>
-              <div style={{fontSize:12,color:"var(--text3)",marginTop:6}}>Try a name, client, role, or tag</div>
+              <Search size={28} color="var(--text3)" style={{marginBottom:12,opacity:.4}}/>
+              <div style={{fontSize:14,color:"var(--text2)",letterSpacing:"-0.01em"}}>No results for "<b>{q}</b>"</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:6,fontFamily:"'Geist Mono',monospace"}}>Try a name, client, role, or tag</div>
             </div>
           )}
           {q.trim()&&results.length>0&&(
             <div style={{padding:"8px 8px"}}>
-              {/* Group by type */}
               {["project","crew","vendor","artist","invoice"].map(type=>{
                 const group=results.filter(r=>r.type===type);
                 if(!group.length)return null;
-                const labels={project:"Projects",crew:"Crew",vendor:"Vendors",artist:"Artists",invoice:"Invoices"};
+                const TypeIcon=SEARCH_TYPE_ICONS[type];
                 return(
                   <div key={type}>
-                    <div style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.08em",textTransform:"uppercase",padding:"8px 10px 4px"}}>{labels[type]}</div>
-                    {group.map((item,gi)=>{
+                    <div style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",padding:"8px 8px 4px"}}>{typeLabels[type]}</div>
+                    {group.map((item)=>{
                       const globalIdx=results.indexOf(item);
                       const isActive=globalIdx===sel;
                       return(
                         <div key={item.id} onClick={()=>go(item)} onMouseEnter={()=>setSel(globalIdx)}
-                          style={{display:"flex",alignItems:"center",gap:12,padding:"9px 10px",borderRadius:10,cursor:"pointer",background:isActive?"var(--bg4)":"transparent",transition:"background .08s",marginBottom:2}}>
-                          <div style={{width:32,height:32,borderRadius:9,background:typeColors[type]+"22",border:`1px solid ${typeColors[type]}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{item.icon}</div>
+                          style={{display:"flex",alignItems:"center",gap:10,padding:"8px 8px",borderRadius:8,cursor:"pointer",background:isActive?"var(--bg4)":"transparent",transition:"background .08s",marginBottom:1}}>
+                          <div style={{width:30,height:30,borderRadius:8,background:typeColors[type]+"18",border:`1px solid ${typeColors[type]}28`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <TypeIcon size={14} strokeWidth={1.75} color={typeColors[type]}/>
+                          </div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:13,fontWeight:500,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{highlight(item.label,q)}</div>
+                            <div style={{fontSize:13,fontWeight:500,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:"-0.01em"}}>{highlight(item.label,q)}</div>
                             <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.sub}</div>
                           </div>
-                          <div style={{fontSize:11,color:typeColors[type],fontFamily:"'Geist Mono',monospace",background:typeColors[type]+"18",borderRadius:6,padding:"2px 7px",flexShrink:0,textTransform:"capitalize"}}>{type}</div>
+                          <div style={{fontSize:10,color:typeColors[type],fontFamily:"'Geist Mono',monospace",background:typeColors[type]+"15",borderRadius:5,padding:"2px 7px",flexShrink:0,textTransform:"capitalize",letterSpacing:"0.04em"}}>{type}</div>
                           {isActive&&<span style={{fontSize:11,color:"var(--text3)"}}>↵</span>}
                         </div>
                       );
@@ -2362,10 +2431,8 @@ function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose
           )}
         </div>
         {/* Footer */}
-        <div style={{padding:"10px 18px",borderTop:"1px solid var(--border)",display:"flex",gap:16,alignItems:"center"}}>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↑↓ navigate</span>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↵ open tab</span>
-          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>ESC close</span>
+        <div style={{padding:"9px 16px",borderTop:"1px solid var(--border)",display:"flex",gap:14,alignItems:"center"}}>
+          {[["↑↓","navigate"],["↵","open"],["ESC","close"]].map(([k,v])=><span key={k} style={{display:"flex",alignItems:"center",gap:4}}><kbd style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg4)",border:"1px solid var(--border2)",borderRadius:4,padding:"1px 5px"}}>{k}</kbd><span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{v}</span></span>)}
           {results.length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{results.length} result{results.length!==1?"s":""}</span>}
         </div>
       </div>
@@ -2414,21 +2481,31 @@ export default function App(){
         <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(14,14,16,0.9)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
           <style>{`#hdr{padding:0 28px;}`}</style>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{pageTitle}</span>
-            {isViewer&&<span style={{fontSize:11,fontFamily:"'Geist Mono',monospace",background:"var(--green-bg)",color:"var(--green)",border:"1px solid rgba(48,209,88,.2)",borderRadius:20,padding:"2px 10px"}}>View only</span>}
-            <span className="hmob" style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
+            <span style={{fontSize:15,fontWeight:500,color:"var(--text)",letterSpacing:"-0.02em"}}>{pageTitle}</span>
+            {isViewer&&<span style={{fontSize:10,fontFamily:"'Geist Mono',monospace",background:"var(--green-bg)",color:"var(--green)",border:"1px solid rgba(48,209,88,.2)",borderRadius:20,padding:"2px 10px",letterSpacing:"0.06em",textTransform:"uppercase"}}>View only</span>}
+            <span className="hmob" style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",letterSpacing:"0.03em"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <button onClick={()=>setShowSearch(true)} title="Global search (⌘K)" style={{display:"flex",alignItems:"center",gap:7,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:13,color:"var(--text2)",padding:"0 12px",flexShrink:0}}>
-              <span style={{fontSize:14}}>🔍</span>
-              <span className="hmob" style={{fontSize:12,fontFamily:"'Geist Mono',monospace"}}>Search</span>
-              <kbd className="hmob" style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:4,padding:"1px 5px",marginLeft:2}}>⌘K</kbd>
+          <div style={{display:"flex",alignItems:"center",gap:5}}>
+            <button onClick={()=>setShowSearch(true)} title="Global search (⌘K)" style={{display:"flex",alignItems:"center",gap:7,height:32,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",padding:"0 11px",flexShrink:0,transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+              <Search size={14} strokeWidth={2}/>
+              <span className="hmob" style={{fontSize:12,fontFamily:"'Geist Mono',monospace",letterSpacing:"0.02em"}}>Search</span>
+              <kbd className="hmob" style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:4,padding:"1px 5px",marginLeft:2,letterSpacing:"0"}}>⌘K</kbd>
             </button>
-            {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.25)",borderRadius:9,cursor:"pointer",fontSize:17,textDecoration:"none",flexShrink:0}}>💲</a>}
-            {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>💲</button>}
-            <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>{theme==="dark"?"☀️":"🌙"}</button>
-            {isAdmin&&<button onClick={()=>setShowChgPw(true)} title="Passwords" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>🔒</button>}
-            <button onClick={()=>{sessionStorage.removeItem("frameOS_role");setRole(null);}} title="Lock" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>↩</button>
+            {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.2)",borderRadius:8,cursor:"pointer",textDecoration:"none",flexShrink:0,color:"var(--amber)",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(255,214,10,.4)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(255,214,10,.2)";}}>
+              <ReceiptText size={15} strokeWidth={1.75}/>
+            </a>}
+            {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",flexShrink:0,color:"var(--text3)",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+              <ReceiptText size={15} strokeWidth={1.75}/>
+            </button>}
+            <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",flexShrink:0,color:"var(--text3)",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+              {theme==="dark"?<Sun size={15} strokeWidth={1.75}/>:<Moon size={15} strokeWidth={1.75}/>}
+            </button>
+            {isAdmin&&<button onClick={()=>setShowChgPw(true)} title="Passwords" style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",flexShrink:0,color:"var(--text3)",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+              <Lock size={14} strokeWidth={1.75}/>
+            </button>}
+            <button onClick={()=>{sessionStorage.removeItem("frameOS_role");setRole(null);}} title="Lock session" style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",flexShrink:0,color:"var(--text3)",transition:"all .15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--border2)";e.currentTarget.style.color="var(--text2)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--text3)";}}>
+              <LogOut size={14} strokeWidth={1.75}/>
+            </button>
           </div>
         </header>
         <main style={{flex:1,padding:"26px 28px",minWidth:0,overflow:"hidden"}}>
@@ -2443,9 +2520,10 @@ export default function App(){
         </main>
         {/* Mobile bottom nav */}
         <nav className="bnav">
-          {NAV.map(n=><button key={n.id} className={`bni${safeTab===n.id?" active":""}`} onClick={()=>setTab(n.id)}>
-            <span className="bni-ic">{n.icon}</span><span className="bni-lb">{n.label}</span>
-          </button>)}
+          {NAV.map(n=>{const act=safeTab===n.id;const{Icon}=n;return(<button key={n.id} className={`bni${act?" active":""}`} onClick={()=>setTab(n.id)}>
+            <span className="bni-ic" style={{color:act?"var(--accent)":"var(--text3)"}}><Icon size={20} strokeWidth={act?2:1.75}/></span>
+            <span className="bni-lb">{n.label}</span>
+          </button>);})}
         </nav>
         <footer style={{borderTop:"1px solid var(--border)",padding:"12px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{studioName} · v2.2 · {isAdmin?"Synced with Supabase":"View only"}</span>
