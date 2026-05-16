@@ -2595,12 +2595,12 @@ export default function App(){
   if(!role)return <><style>{FONTS}{GS}</style><LockScreen onUnlock={tryUnlock} studioName={studioName}/></>;
   if(loadingCrew)return <><style>{FONTS}{GS}</style><LoadingScreen msg="Syncing team data…"/></>;
   return(<>
-    <style>{FONTS}{GS}</style>
-    <div style={{display:"flex",minHeight:"100vh",background:"var(--bg)"}}>
-      <Sidebar tab={safeTab} setTab={setTab} collapsed={collapsed} setCollapsed={setCollapsed} studioName={studioName} setStudioName={setStudioName} role={role}/>
-      <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",minWidth:0,transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
-        <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(14,14,16,0.9)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
-          <style>{`#hdr{padding:0 28px;}`}</style>
+  <style>{FONTS}{GS}</style>
+<div style={{display:"flex",minHeight:"100vh",background:"var(--bg)"}}>
+  <Sidebar tab={safeTab} setTab={setTab} collapsed={collapsed} setCollapsed={setCollapsed} studioName={studioName} setStudioName={setStudioName} role={role}/>
+  <div className="mc" style={{flex:1,marginLeft:sideW,display:"flex",flexDirection:"column",minHeight:"100vh",minWidth:0,transition:"margin-left .25s cubic-bezier(.32,.72,0,1)"}}>
+    <header style={{position:"sticky",top:0,zIndex:40,height:"var(--header-h)",background:"rgba(18,18,22,.96)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",borderBottom:"1px solid rgba(255,255,255,.09)",display:"flex",alignItems:"center",gap:14}} className="hpad" id="hdr">
+      <style>{`#hdr{padding:0 28px;}`}</style>
           <div style={{flex:1,display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:15,fontWeight:500,color:"var(--text)",letterSpacing:"-0.02em"}}>{pageTitle}</span>
             {isViewer&&<span style={{fontSize:10,fontFamily:"'Geist Mono',monospace",background:"var(--green-bg)",color:"var(--green)",border:"1px solid rgba(48,209,88,.2)",borderRadius:20,padding:"2px 10px",letterSpacing:"0.06em",textTransform:"uppercase"}}>View only</span>}
