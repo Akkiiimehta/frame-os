@@ -403,9 +403,7 @@ function exportProject(project, crew){
 
 /* ── CSV IMPORT UTILITIES ── */
 function parseCSVText(text) {
-  const lines = text.split(/\r?\n/);
-  if (lines.length < 2) return { headers: [], rows: [] };
-  // Simple CSV parser: handles quoted fields
+  // Proper CSV parser that handles quoted fields containing embedded newlines
   const parseRow = (line) => {
     const result = [];
     let cur = "";
@@ -419,12 +417,33 @@ function parseCSVText(text) {
     result.push(cur.trim());
     return result;
   };
-  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
-  const rows = lines.slice(1).map(l => {
+  // NAME ALIASES used to detect the real header row (skips preamble rows)
+  const NAME_ALIASES = ["name","fullname","artistname","crewname","talent","membername","artistfullname"];
+  const lines = text.split(/
+?
+/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+  // Scan up to 20 lines to find the real header row
+  let headerLineIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 20); i++) {
+    const cells = parseRow(lines[i]).map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ""));
+    const hasName = cells.some(c =>
+      NAME_ALIASES.some(alias =>
+        c === alias || (c.length >= 4 && alias.length >= 4 && (c.includes(alias) || alias.includes(c)))
+      )
+    );
+    if (hasName) { headerLineIdx = i; break; }
+  }
+  const headers = parseRow(lines[headerLineIdx]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const rows = lines.slice(headerLineIdx + 1).map(l => {
     if (!l.trim()) return null;
     const vals = parseRow(l);
+    const nonEmpty = vals.filter(v => v.trim());
+    if (nonEmpty.length < 2) return null;
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = vals[i] !== undefined ? vals[i] : ""; });
+    headers.forEach((h, i) => {
+      obj[h] = vals[i] !== undefined ? vals[i].replace(/[​-‏﻿]/g, "").trim() : "";
+    });
     return obj;
   }).filter(Boolean);
   return { headers, rows };
