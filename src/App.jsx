@@ -558,28 +558,36 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
   const [step, setStep] = useState("upload"); // upload | preview | importing | done
   const [rows, setRows] = useState([]);
   const [colMap, setColMap] = useState({});
-  const [validRows, setValidRows] = useState([]);
+  const [validRows, setValidRows] = useState([]); // [{raw, isDup}]
+  const [checked, setChecked] = useState([]); // parallel bool array
   const [skipped, setSkipped] = useState(0);
   const [duplicates, setDuplicates] = useState(0);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
   const fileRef = useRef();
+  const toggleRow = (i) => setChecked(c => c.map((v,j) => j===i ? !v : v));
+  const checkAll = (val) => setChecked(c => c.map(() => val));
+  const selectedCount = checked.filter(Boolean).length;
 
   const processRows = (parsed, map) => {
     if (!map.name) { setErr("Could not detect a name column. Ensure your file has a column like 'Name', 'Full Name', or 'Artist Name'."); return; }
     const nameCol = map.name;
     const existingSet = new Set(existingNames.map(n => n.toLowerCase().trim()));
-    let dupCount = 0;
-    const valid = parsed.filter(r => {
+    let skippedEmpty = 0;
+    const allValid = [];
+    parsed.forEach(r => {
       const nm = (r[nameCol] || "").trim();
-      if (!nm) return false;
-      if (existingSet.has(nm.toLowerCase())) { dupCount++; return false; }
-      return true;
+      if (!nm) { skippedEmpty++; return; }
+      const isDup = existingSet.has(nm.toLowerCase());
+      allValid.push({ raw: r, isDup });
     });
+    const dupCount = allValid.filter(r => r.isDup).length;
     setRows(parsed);
     setColMap(map);
-    setValidRows(valid);
-    setSkipped(parsed.length - valid.length - dupCount);
+    setValidRows(allValid);
+    // checked: true = will import, false = skip. Dups start unchecked.
+    setChecked(allValid.map(r => !r.isDup));
+    setSkipped(skippedEmpty);
     setDuplicates(dupCount);
     setErr("");
     setStep("preview");
@@ -630,8 +638,9 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
 
   const doImport = async () => {
     setStep("importing");
-    const mapped = validRows.map(r =>
-      type === "artist" ? mapArtistRow(r, colMap) : mapCrewRow(r, colMap)
+    const toImport = validRows.filter((_, i) => checked[i]);
+    const mapped = toImport.map(r =>
+      type === "artist" ? mapArtistRow(r.raw, colMap) : mapCrewRow(r.raw, colMap)
     );
     const res = await onImport(mapped);
     setResult(res);
@@ -667,46 +676,65 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
             <div style={{ background: "var(--green-bg)", border: "1px solid rgba(48,209,88,.18)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--green)", fontFamily: "'Geist Mono',monospace" }}>{validRows.length}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>ready to import</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--green)", fontFamily: "'Geist Mono',monospace" }}>{selectedCount}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>selected to import</div>
             </div>
             <div style={{ background: "var(--amber-bg)", border: "1px solid rgba(255,214,10,.18)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 700, color: "var(--amber)", fontFamily: "'Geist Mono',monospace" }}>{duplicates}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>duplicates skipped</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>already exist</div>
             </div>
             <div style={{ background: "var(--bg4)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", fontFamily: "'Geist Mono',monospace" }}>{skipped}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>empty rows skipped</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>empty skipped</div>
             </div>
           </div>
+          {duplicates > 0 && (
+            <div style={{ background: "var(--amber-bg)", border: "1px solid rgba(255,214,10,.2)", borderRadius: 8, padding: "9px 13px", fontSize: 12, color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <span>⚠ {duplicates} name{duplicates!==1?"s":""} already exist — unchecked by default.</span>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button className="btn-sm" onClick={() => setChecked(c => c.map((v,i) => validRows[i].isDup ? true : v))} style={{ fontSize: 11, padding: "3px 9px" }}>Include all</button>
+                <button className="btn-sm" onClick={() => setChecked(c => c.map((v,i) => validRows[i].isDup ? false : v))} style={{ fontSize: 11, padding: "3px 9px" }}>Skip all</button>
+              </div>
+            </div>
+          )}
           {validRows.length === 0 && (
             <div style={{ background: "var(--amber-bg)", border: "1px solid rgba(255,214,10,.2)", borderRadius: 8, padding: "10px 13px", fontSize: 13, color: "var(--amber)" }}>
-              No new rows to import. All entries may already exist or are empty.
+              No rows to import. File may be empty.
             </div>
           )}
           {validRows.length > 0 && (
-            <div style={{ maxHeight: 160, overflowY: "auto", background: "var(--bg3)", borderRadius: 8, border: "1px solid var(--border)" }}>
+            <div style={{ maxHeight: 220, overflowY: "auto", background: "var(--bg3)", borderRadius: 8, border: "1px solid var(--border)" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
-                  <tr style={{ background: "var(--bg4)" }}>
+                  <tr style={{ background: "var(--bg4)", position: "sticky", top: 0 }}>
+                    <th style={{ padding: "7px 8px", textAlign: "center", width: 32 }}>
+                      <input type="checkbox" checked={selectedCount === validRows.length} onChange={e => checkAll(e.target.checked)} style={{ cursor: "pointer" }}/>
+                    </th>
                     <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>Name</th>
                     <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>{type === "artist" ? "Category" : "Role"}</th>
                     <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>Phone</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {validRows.slice(0, 50).map((r, i) => {
-                    const mapped = type === "artist" ? mapArtistRow(r, colMap) : mapCrewRow(r, colMap);
+                  {validRows.slice(0, 80).map((r, i) => {
+                    const mapped = type === "artist" ? mapArtistRow(r.raw, colMap) : mapCrewRow(r.raw, colMap);
+                    const isChecked = checked[i] ?? true;
                     return (
-                      <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
-                        <td style={{ padding: "6px 10px", color: "var(--text)" }}>{mapped.name}</td>
+                      <tr key={i} onClick={() => toggleRow(i)} style={{ borderTop: "1px solid var(--border)", cursor: "pointer", opacity: isChecked ? 1 : 0.45, background: r.isDup ? "rgba(255,214,10,0.04)" : "transparent" }}>
+                        <td style={{ padding: "6px 8px", textAlign: "center" }} onClick={e => { e.stopPropagation(); toggleRow(i); }}>
+                          <input type="checkbox" checked={isChecked} onChange={() => toggleRow(i)} style={{ cursor: "pointer" }}/>
+                        </td>
+                        <td style={{ padding: "6px 10px", color: "var(--text)" }}>
+                          {r.isDup && <span title="Already exists" style={{ color: "var(--amber)", marginRight: 5 }}>⚠</span>}
+                          {mapped.name}
+                        </td>
                         <td style={{ padding: "6px 10px", color: "var(--text2)" }}>{type === "artist" ? mapped.category : mapped.role}</td>
                         <td style={{ padding: "6px 10px", color: "var(--text3)", fontFamily: "'Geist Mono',monospace" }}>{mapped.phone || "—"}</td>
                       </tr>
                     );
                   })}
-                  {validRows.length > 50 && (
-                    <tr><td colSpan={3} style={{ padding: "6px 10px", color: "var(--text3)", fontStyle: "italic" }}>…and {validRows.length - 50} more</td></tr>
+                  {validRows.length > 80 && (
+                    <tr><td colSpan={4} style={{ padding: "6px 10px", color: "var(--text3)", fontStyle: "italic" }}>…and {validRows.length - 80} more</td></tr>
                   )}
                 </tbody>
               </table>
@@ -715,9 +743,9 @@ function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
             <button className="btn-g" onClick={() => { setStep("upload"); setErr(""); }}>← Back</button>
             <button className="btn-g" onClick={onClose}>Cancel</button>
-            {validRows.length > 0 && (
+            {selectedCount > 0 && (
               <button className="btn-p" onClick={doImport}>
-                Import {validRows.length} {type === "artist" ? "artists" : "crew"}
+                Import {selectedCount} {type === "artist" ? "artists" : "crew"}
               </button>
             )}
           </div>
@@ -1449,6 +1477,8 @@ function CrewView({allCrew,setAllCrew,projects,role}){
   const isAdmin=role==="admin";
   const[customDesignations]=usePersist("frameOS_customDesignations",["Senior Producer","Product Designer","DOP","Editor","Sound Designer","VFX Artist","Gaffer","Assistant Director"]);
   const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);const[showDesignations,setShowDesignations]=useState(false);const[showImportCrew,setShowImportCrew]=useState(false);
+  const[toast,setToast]=useState(null);
+  const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2800);};
   const allRoleOptions=[...CREW_ROLES,...customDesignations.filter(d=>!CREW_ROLES.includes(d))];
   const[form,setForm]=useState({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=allCrew.filter(c=>(filterR==="All"||c.role===filterR)&&(c.name.toLowerCase().includes(search.toLowerCase())||c.role.toLowerCase().includes(search.toLowerCase())));
@@ -1481,6 +1511,16 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     }
     return{imported,failed};
   };
+  const sendCrewToArtist=async(m)=>{
+    const artist={name:m.name,category:m.role||"Other",phone:m.phone,email:m.email,instagram:"",portfolio:"",agency:"",location:m.location,notes:m.notes||"",tags:m.tags||[]};
+    await dbUpsertArtist(artist);
+    showToast(`${m.name} added to Artists ✓`);
+  };
+  const sendCrewToVendor=async(m)=>{
+    const vendor={name:m.name,category:"Other",contact:m.name,phone:m.phone,email:m.email,location:m.location,rate:"",notes:m.notes||""};
+    await dbUpsertVendor(vendor);
+    showToast(`${m.name} added to Vendors ✓`);
+  };
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
       <SC2 label="Total crew" value={allCrew.length} color="var(--text)" icon="👥" delay={0}/>
@@ -1491,6 +1531,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All","Director","DOP","Producer","AD","Editor","Gaffer","Other"].map(r=><button key={r} className={`fpill${filterR===r?" active":""}`} onClick={()=>setFilterR(r)}>{r}</button>)}</div>
       <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-g" onClick={()=>setShowImportCrew(true)}>📥 Import CSV</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
     </div>
+    {toast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"var(--bg2)",border:"1px solid var(--green)",borderRadius:10,padding:"10px 20px",fontSize:13,color:"var(--green)",zIndex:999,boxShadow:"0 8px 32px rgba(0,0,0,.4)",animation:"fadeUp .25s ease",pointerEvents:"none"}}>{toast}</div>}
     {showImportCrew&&<CSVImportModal title="Import Crew from CSV" type="crew" onClose={()=>setShowImportCrew(false)} onImport={doImportCrew} existingNames={allCrew.map(c=>c.name)}/>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {shown.map((c,i)=>{const cP=projects.filter(p=>c.projects.includes(p.id));return <div key={c.id} className="card clickable fade-up" style={{padding:"18px 20px",animationDelay:`${i*45}ms`,position:"relative",overflow:"hidden"}} onClick={()=>setSelected(c.id)}>
@@ -1519,7 +1560,7 @@ function CrewView({allCrew,setAllCrew,projects,role}){
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}><Av name={m.name} idx={idx} size={46}/><div><div style={{fontSize:19,fontWeight:700,color:"var(--text)",marginBottom:4}}>{m.name}</div><RBadge role={m.role}/>{m.phone&&<div style={{fontSize:12,color:"var(--text2)",marginTop:5,display:"flex",alignItems:"center",gap:5}}><span>📞</span><span style={{fontFamily:"'Geist Mono',monospace"}}>{m.phone}</span></div>}</div></div>
             <div style={{display:"flex",gap:8}}>
-              {isAdmin&&<button onClick={()=>{if(window.confirm(`Remove ${m.name}?`)){delM(m.id);setSelected(null);}}} style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>}
+              {isAdmin&&<><button onClick={()=>sendCrewToArtist(m)} title="Send to Artists" style={{background:"var(--purple-bg)",border:"1px solid rgba(191,90,242,.2)",color:"var(--purple)",height:30,padding:"0 10px",borderRadius:8,cursor:"pointer",fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>🎤 Artists</button><button onClick={()=>sendCrewToVendor(m)} title="Send to Vendors" style={{background:"var(--teal-bg)",border:"1px solid rgba(90,200,250,.2)",color:"var(--teal)",height:30,padding:"0 10px",borderRadius:8,cursor:"pointer",fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>🏭 Vendor</button><button onClick={()=>{if(window.confirm(`Remove ${m.name}?`)){delM(m.id);setSelected(null);}}} style={{background:"var(--red-bg)",border:"1px solid rgba(255,69,58,.2)",color:"var(--red)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button></>}
               <button onClick={()=>setSelected(null)} style={{background:"var(--bg4)",border:"1px solid var(--border)",color:"var(--text2)",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           </div>
