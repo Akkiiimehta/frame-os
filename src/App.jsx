@@ -401,6 +401,307 @@ function exportProject(project, crew){
   URL.revokeObjectURL(url);
 }
 
+/* ── CSV IMPORT UTILITIES ── */
+function parseCSVText(text) {
+  const lines = text.split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+  // Simple CSV parser: handles quoted fields
+  const parseRow = (line) => {
+    const result = [];
+    let cur = "";
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; continue; }
+      if (ch === "," && !inQ) { result.push(cur.trim()); cur = ""; continue; }
+      cur += ch;
+    }
+    result.push(cur.trim());
+    return result;
+  };
+  const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const rows = lines.slice(1).map(l => {
+    if (!l.trim()) return null;
+    const vals = parseRow(l);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] !== undefined ? vals[i] : ""; });
+    return obj;
+  }).filter(Boolean);
+  return { headers, rows };
+}
+
+// Fuzzy column matching: returns mapped field name or null
+function matchCol(headers, candidates) {
+  const normalized = candidates.map(c => c.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  for (const h of headers) {
+    if (normalized.includes(h)) return h;
+    // partial match
+    for (const n of normalized) {
+      if (h.includes(n) || n.includes(h)) return h;
+    }
+  }
+  return null;
+}
+
+// For artists: map raw row → artist fields
+function mapArtistRow(rawRow, colMap) {
+  const get = (field) => {
+    const col = colMap[field];
+    return col ? (rawRow[col] || "") : "";
+  };
+  return {
+    name: get("name"),
+    category: get("category") || "Other",
+    phone: get("phone"),
+    email: get("email"),
+    instagram: get("instagram"),
+    location: get("location"),
+    portfolio: "",
+    agency: "",
+    notes: "",
+    tags: []
+  };
+}
+
+// For crew: map raw row → crew fields
+function mapCrewRow(rawRow, colMap) {
+  const get = (field) => {
+    const col = colMap[field];
+    return col ? (rawRow[col] || "") : "";
+  };
+  return {
+    name: get("name"),
+    role: get("role") || "Other",
+    phone: get("phone"),
+    email: get("email"),
+    location: get("location"),
+    tags: [],
+    notes: "",
+    projects: []
+  };
+}
+
+// Detect column map from headers for artist CSV
+function detectArtistColMap(headers) {
+  return {
+    name: matchCol(headers, ["name", "artistname", "fullname", "talent", "artistfullname"]),
+    category: matchCol(headers, ["category", "type", "role", "profession", "artisttype", "genre"]),
+    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno", "contactno"]),
+    email: matchCol(headers, ["email", "mail", "emailid", "emailaddress"]),
+    instagram: matchCol(headers, ["instagram", "ig", "handle", "instahandle", "instagramhandle", "ighandle"]),
+    location: matchCol(headers, ["location", "city", "place", "based", "basedout", "basedoutin"]),
+  };
+}
+
+// Detect column map from headers for crew CSV
+function detectCrewColMap(headers) {
+  return {
+    name: matchCol(headers, ["name", "fullname", "crewname", "membername"]),
+    role: matchCol(headers, ["role", "designation", "profession", "position", "jobtitle", "dept"]),
+    phone: matchCol(headers, ["phone", "mobile", "contact", "phoneno", "mobileno"]),
+    email: matchCol(headers, ["email", "mail", "emailid", "emailaddress"]),
+    location: matchCol(headers, ["location", "city", "place", "based"]),
+  };
+}
+
+function ColMapSummary({ colMap, requiredFields = ["name"] }) {
+  const allFields = Object.keys(colMap);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {allFields.map(field => {
+        const detected = !!colMap[field];
+        const required = requiredFields.includes(field);
+        return (
+          <div key={field} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12 }}>
+            <span style={{ color: detected ? "var(--green)" : required ? "var(--red)" : "var(--text3)", fontSize: 13 }}>
+              {detected ? "✓" : required ? "✗" : "–"}
+            </span>
+            <span style={{ color: detected ? "var(--text2)" : required ? "var(--red)" : "var(--text3)", fontFamily: "'Geist Mono',monospace" }}>
+              {field}
+            </span>
+            {detected && (
+              <span style={{ color: "var(--text3)", fontSize: 11 }}>← "{colMap[field]}"</span>
+            )}
+            {!detected && required && (
+              <span style={{ color: "var(--red)", fontSize: 11 }}>not found</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── CSV IMPORT MODAL (reusable) ── */
+function CSVImportModal({ title, type, onClose, onImport, existingNames = [] }) {
+  const [step, setStep] = useState("upload"); // upload | preview | importing | done
+  const [rows, setRows] = useState([]);
+  const [colMap, setColMap] = useState({});
+  const [validRows, setValidRows] = useState([]);
+  const [skipped, setSkipped] = useState(0);
+  const [duplicates, setDuplicates] = useState(0);
+  const [result, setResult] = useState(null);
+  const [err, setErr] = useState("");
+  const fileRef = useRef();
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.name.endsWith(".csv")) { setErr("Please upload a .csv file."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const { headers, rows: parsed } = parseCSVText(ev.target.result);
+        if (!headers.length || !parsed.length) { setErr("CSV appears empty or malformed."); return; }
+        const map = type === "artist" ? detectArtistColMap(headers) : detectCrewColMap(headers);
+        if (!map.name) { setErr("Could not detect a name column. Ensure your CSV has a column like 'Name', 'Full Name', or 'Artist Name'."); return; }
+        const nameCol = map.name;
+        const existingSet = new Set(existingNames.map(n => n.toLowerCase().trim()));
+        let dupCount = 0;
+        const valid = parsed.filter(r => {
+          const nm = (r[nameCol] || "").trim();
+          if (!nm) return false;
+          if (existingSet.has(nm.toLowerCase())) { dupCount++; return false; }
+          return true;
+        });
+        setRows(parsed);
+        setColMap(map);
+        setValidRows(valid);
+        setSkipped(parsed.length - valid.length - dupCount);
+        setDuplicates(dupCount);
+        setErr("");
+        setStep("preview");
+      } catch {
+        setErr("Failed to parse CSV. Make sure it's a valid UTF-8 CSV file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const doImport = async () => {
+    setStep("importing");
+    const mapped = validRows.map(r =>
+      type === "artist" ? mapArtistRow(r, colMap) : mapCrewRow(r, colMap)
+    );
+    const res = await onImport(mapped);
+    setResult(res);
+    setStep("done");
+  };
+
+  return (
+    <Modal title={title} onClose={onClose} width={500}>
+      {step === "upload" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 9, padding: "12px 14px", fontSize: 13, color: "var(--text2)", lineHeight: 1.7 }}>
+            Upload a <b style={{ color: "var(--text)" }}>.csv</b> file. Column headers are auto-detected — no exact format required.<br />
+            <span style={{ color: "var(--text3)", fontSize: 12 }}>
+              {type === "artist"
+                ? "Supports: Name, Category/Type, Phone, Email, Instagram, Location"
+                : "Supports: Name, Role/Designation, Phone, Email, Location"}
+            </span>
+          </div>
+          {err && <div style={{ background: "var(--red-bg)", border: "1px solid rgba(255,69,58,.2)", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "var(--red)" }}>{err}</div>}
+          <input ref={fileRef} type="file" accept=".csv" onChange={handleFile} style={{ display: "none" }} />
+          <button className="btn-p" onClick={() => fileRef.current?.click()}>📂 Choose CSV file</button>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn-g" onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {step === "preview" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 9, padding: "13px 14px" }}>
+            <div style={{ fontSize: 12, color: "var(--text3)", fontFamily: "'Geist Mono',monospace", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Column detection</div>
+            <ColMapSummary colMap={colMap} requiredFields={["name"]} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div style={{ background: "var(--green-bg)", border: "1px solid rgba(48,209,88,.18)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--green)", fontFamily: "'Geist Mono',monospace" }}>{validRows.length}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>ready to import</div>
+            </div>
+            <div style={{ background: "var(--amber-bg)", border: "1px solid rgba(255,214,10,.18)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--amber)", fontFamily: "'Geist Mono',monospace" }}>{duplicates}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>duplicates skipped</div>
+            </div>
+            <div style={{ background: "var(--bg4)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", fontFamily: "'Geist Mono',monospace" }}>{skipped}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>empty rows skipped</div>
+            </div>
+          </div>
+          {validRows.length === 0 && (
+            <div style={{ background: "var(--amber-bg)", border: "1px solid rgba(255,214,10,.2)", borderRadius: 8, padding: "10px 13px", fontSize: 13, color: "var(--amber)" }}>
+              No new rows to import. All entries may already exist or are empty.
+            </div>
+          )}
+          {validRows.length > 0 && (
+            <div style={{ maxHeight: 160, overflowY: "auto", background: "var(--bg3)", borderRadius: 8, border: "1px solid var(--border)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: "var(--bg4)" }}>
+                    <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>Name</th>
+                    <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>{type === "artist" ? "Category" : "Role"}</th>
+                    <th style={{ padding: "7px 10px", textAlign: "left", color: "var(--text2)", fontWeight: 500 }}>Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validRows.slice(0, 50).map((r, i) => {
+                    const mapped = type === "artist" ? mapArtistRow(r, colMap) : mapCrewRow(r, colMap);
+                    return (
+                      <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
+                        <td style={{ padding: "6px 10px", color: "var(--text)" }}>{mapped.name}</td>
+                        <td style={{ padding: "6px 10px", color: "var(--text2)" }}>{type === "artist" ? mapped.category : mapped.role}</td>
+                        <td style={{ padding: "6px 10px", color: "var(--text3)", fontFamily: "'Geist Mono',monospace" }}>{mapped.phone || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                  {validRows.length > 50 && (
+                    <tr><td colSpan={3} style={{ padding: "6px 10px", color: "var(--text3)", fontStyle: "italic" }}>…and {validRows.length - 50} more</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+            <button className="btn-g" onClick={() => { setStep("upload"); setErr(""); }}>← Back</button>
+            <button className="btn-g" onClick={onClose}>Cancel</button>
+            {validRows.length > 0 && (
+              <button className="btn-p" onClick={doImport}>
+                Import {validRows.length} {type === "artist" ? "artists" : "crew"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {step === "importing" && (
+        <div style={{ padding: "28px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+          <div style={{ width: 32, height: 32, border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+          <div style={{ fontSize: 13, color: "var(--text2)" }}>Inserting into Supabase…</div>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      )}
+
+      {step === "done" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ background: "var(--green-bg)", border: "1px solid rgba(48,209,88,.2)", borderRadius: 9, padding: "13px 14px" }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--green)", marginBottom: 4 }}>
+              ✓ Import complete
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text2)" }}>
+              {result?.imported ?? 0} {type === "artist" ? "artists" : "crew members"} added successfully.
+              {result?.failed > 0 && <span style={{ color: "var(--red)" }}> {result.failed} failed.</span>}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button className="btn-p" onClick={onClose}>Done</button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /* ── UI HELPERS ── */
 function LoadingScreen({msg="Loading…"}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}><div style={{width:36,height:36,border:"2px solid rgba(255,255,255,0.1)",borderTopColor:"var(--accent)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/><div style={{fontSize:13,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{msg}</div><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;}
 function ErrScreen({msg}){return<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,padding:24}}><div style={{fontSize:28}}>⚠️</div><div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>Database connection failed</div><div style={{fontSize:13,color:"var(--text3)",textAlign:"center",maxWidth:340}}>{msg}</div><button className="btn-p" onClick={()=>window.location.reload()}>Retry</button></div>;}
@@ -1097,7 +1398,7 @@ function ExportModal({onClose,allProjects,allCrew,allVendors}){
 function CrewView({allCrew,setAllCrew,projects,role}){
   const isAdmin=role==="admin";
   const[customDesignations]=usePersist("frameOS_customDesignations",["Senior Producer","Product Designer","DOP","Editor","Sound Designer","VFX Artist","Gaffer","Assistant Director"]);
-  const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);const[showDesignations,setShowDesignations]=useState(false);
+  const[filterR,setFilterR]=useState("All");const[search,setSearch]=useState("");const[showAdd,setShowAdd]=useState(false);const[selected,setSelected]=useState(null);const[showDesignations,setShowDesignations]=useState(false);const[showImportCrew,setShowImportCrew]=useState(false);
   const allRoleOptions=[...CREW_ROLES,...customDesignations.filter(d=>!CREW_ROLES.includes(d))];
   const[form,setForm]=useState({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:""});const fset=k=>v=>setForm(f=>({...f,[k]:v}));
   const shown=allCrew.filter(c=>(filterR==="All"||c.role===filterR)&&(c.name.toLowerCase().includes(search.toLowerCase())||c.role.toLowerCase().includes(search.toLowerCase())));
@@ -1123,6 +1424,13 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     setForm({name:"",role:"DOP",phone:"",email:"",location:"",tags:"",notes:"",customRole:""});
     setShowAdd(false);
   };
+  const doImportCrew=async(mappedRows)=>{
+    let imported=0;let failed=0;
+    for(const row of mappedRows){
+      try{const saved=await dbUpsertCrew(row);setAllCrew(c=>[...c,saved]);imported++;}catch{failed++;}
+    }
+    return{imported,failed};
+  };
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
       <SC2 label="Total crew" value={allCrew.length} color="var(--text)" icon="👥" delay={0}/>
@@ -1131,8 +1439,9 @@ function CrewView({allCrew,setAllCrew,projects,role}){
     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:18}}>
       <Inp value={search} onChange={setSearch} placeholder="Search name or role…" style={{maxWidth:220,padding:"6px 12px",fontSize:13}}/>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{["All","Director","DOP","Producer","AD","Editor","Gaffer","Other"].map(r=><button key={r} className={`fpill${filterR===r?" active":""}`} onClick={()=>setFilterR(r)}>{r}</button>)}</div>
-      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
+      <div style={{flex:1}}/>{isAdmin&&<><button className="btn-g" onClick={()=>setShowDesignations(true)}>⚙️ Manage Roles</button><button className="btn-g" onClick={()=>setShowImportCrew(true)}>📥 Import CSV</button><button className="btn-p" onClick={()=>setShowAdd(true)}>+ Add member</button></>}
     </div>
+    {showImportCrew&&<CSVImportModal title="Import Crew from CSV" type="crew" onClose={()=>setShowImportCrew(false)} onImport={doImportCrew} existingNames={allCrew.map(c=>c.name)}/>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {shown.map((c,i)=>{const cP=projects.filter(p=>c.projects.includes(p.id));return <div key={c.id} className="card clickable fade-up" style={{padding:"18px 20px",animationDelay:`${i*45}ms`,position:"relative",overflow:"hidden"}} onClick={()=>setSelected(c.id)}>
         <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:rc(c.role)+"44"}}/>
@@ -1292,8 +1601,8 @@ function QuotesView({projects}){
 
 
 /* ── NAV ARRAYS ── */
-const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎬",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
-const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎬",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_A=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"finance",label:"Finance",icon:"₹",sub:"Invoices & revenue"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"quotes",label:"Quotes",icon:"📋",sub:"Estimates & quotes"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
+const NAV_V=[{id:"projects",label:"Projects",icon:"🎬",sub:"Shoots & pipeline"},{id:"clients",label:"Clients",icon:"🏢",sub:"Client directory"},{id:"crew",label:"Crew",icon:"👥",sub:"Cast & crew"},{id:"artists",label:"Artists",icon:"🎤",sub:"Talent & performers"},{id:"about",label:"About",icon:"👤",sub:"Profile & studio"}];
 
 /* ── SIDEBAR ── */
 function Sidebar({tab,setTab,collapsed,setCollapsed,studioName,setStudioName,role}){
@@ -1462,9 +1771,18 @@ function ArtistsView({role}){
   const[allArtists,setAllArtists,,, refetchArtists]=useDB("artists",mpArtist);
   const[filterCat,setFilterCat]=useState("All");const[search,setSearch]=useState("");
   const[showAdd,setShowAdd]=useState(false);const[editArtist,setEditArtist]=useState(null);
+  const[showImport,setShowImport]=useState(false);
   const blankForm={name:"",category:"Singer",phone:"",email:"",instagram:"",portfolio:"",agency:"",location:"",notes:"",tags:[]};
   const[form,setForm]=useState(blankForm);
   const fset=k=>v=>setForm(f=>({...f,[k]:v}));
+  const doImportArtists=async(mappedRows)=>{
+    let imported=0;let failed=0;
+    for(const row of mappedRows){
+      try{const saved=await dbUpsertArtist(row);setAllArtists(a=>[...a,saved]);imported++;}catch{failed++;}
+    }
+    await refetchArtists();
+    return{imported,failed};
+  };
   const shown=allArtists.filter(a=>{
     const catOk=filterCat==="All"||a.category===filterCat;
     const q=search.toLowerCase();
@@ -1491,7 +1809,7 @@ function ArtistsView({role}){
   const safeLink=url=>{if(!url)return"";return url.startsWith("http")?url:"https://"+url;};
   return(<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}} className="g4">
-      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎬" delay={0}/>
+      <SC2 label="Total artists" value={allArtists.length} color="var(--text)" icon="🎤" delay={0}/>
       <SC2 label="Singers" value={allArtists.filter(a=>a.category==="Singer").length} color="var(--purple)" icon="🎵" delay={50}/>
       <SC2 label="Actors" value={allArtists.filter(a=>a.category==="Actor").length} color="var(--accent)" icon="🎭" delay={100}/>
       <SC2 label="Models" value={allArtists.filter(a=>a.category==="Model").length} color="var(--teal)" icon="📸" delay={150}/>
@@ -1502,8 +1820,9 @@ function ArtistsView({role}){
         {["All",...ARTIST_CATS].map(c=><button key={c} className={`fpill${filterCat===c?" active":""}`} onClick={()=>setFilterCat(c)}>{c}</button>)}
       </div>
       <div style={{flex:1}}/>
-      {isAdmin&&<button className="btn-p" onClick={()=>{setForm(blankForm);setShowAdd(true);}}>+ Add artist</button>}
+      {isAdmin&&<><button className="btn-g" onClick={()=>setShowImport(true)}>📥 Import CSV</button><button className="btn-p" onClick={()=>{setForm(blankForm);setShowAdd(true);}}>+ Add artist</button></>}
     </div>
+    {showImport&&<CSVImportModal title="Import Artists from CSV" type="artist" onClose={()=>setShowImport(false)} onImport={doImportArtists} existingNames={allArtists.map(a=>a.name)}/>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g2">
       {shown.map((a,i)=><div key={a.id} className="card fade-up" style={{padding:"18px 20px",animationDelay:`${i*45}ms`,position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"var(--purple)44"}}/>
