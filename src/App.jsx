@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "./lib/supabase";
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');`;
@@ -2254,6 +2254,125 @@ function ArtistsView({role}){
   </div>);
 }
 
+/* ── GLOBAL SEARCH ── */
+function GlobalSearch({projects,crew,vendors,artists,invoices,onNavigate,onClose}){
+  const[q,setQ]=useState("");const inputRef=useRef();const listRef=useRef();const[sel,setSel]=useState(0);
+  useEffect(()=>{if(inputRef.current)inputRef.current.focus();},[]);
+
+  const results=useMemo(()=>{
+    const s=q.trim().toLowerCase();
+    if(!s)return[];
+    const out=[];
+    (projects||[]).forEach(p=>{if([p.title,p.client,p.type,p.status,p.location,...(p.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"project",icon:"🎬",label:p.title,sub:`${p.client} · ${p.status}`,tab:"projects",id:p.id});});
+    (crew||[]).forEach(c=>{if([c.name,c.role,c.email,c.phone,c.location,...(c.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"crew",icon:"👥",label:c.name,sub:`${c.role}${c.location?" · "+c.location:""}`,tab:"crew",id:c.id});});
+    (vendors||[]).forEach(v=>{if([v.name,v.category,v.contact,v.phone,v.email,v.location].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"vendor",icon:"🏭",label:v.name,sub:`${v.category}${v.location?" · "+v.location:""}`,tab:"vendors",id:v.id});});
+    (artists||[]).forEach(a=>{if([a.name,a.category,a.phone,a.email,a.location,...(a.tags||[])].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"artist",icon:"🎤",label:a.name,sub:`${a.category}${a.location?" · "+a.location:""}`,tab:"artists",id:a.id});});
+    (invoices||[]).forEach(i=>{if([i.invoiceNo,i.project,i.client,i.status].some(f=>(f||"").toLowerCase().includes(s)))out.push({type:"invoice",icon:"₹",label:i.invoiceNo||i.project,sub:`${i.client} · ${i.status} · ${fmt(i.amount)}`,tab:"finance",id:i.id});});
+    return out.slice(0,12);
+  },[q,projects,crew,vendors,artists,invoices]);
+
+  useEffect(()=>{setSel(0);},[q]);
+
+  const highlight=(text,query)=>{
+    if(!query.trim())return text;
+    const idx=text.toLowerCase().indexOf(query.toLowerCase());
+    if(idx===-1)return text;
+    return<>{text.slice(0,idx)}<mark style={{background:"var(--accent)",color:"#fff",borderRadius:2,padding:"0 1px"}}>{text.slice(idx,idx+query.length)}</mark>{text.slice(idx+query.length)}</>;
+  };
+
+  const go=(item)=>{onNavigate(item.tab);onClose();};
+
+  const handleKey=e=>{
+    if(e.key==="ArrowDown"){e.preventDefault();setSel(s=>Math.min(s+1,results.length-1));}
+    else if(e.key==="ArrowUp"){e.preventDefault();setSel(s=>Math.max(s-1,0));}
+    else if(e.key==="Enter"){if(results[sel])go(results[sel]);}
+    else if(e.key==="Escape")onClose();
+  };
+
+  const typeColors={project:"var(--teal)",crew:"var(--accent)",vendor:"var(--orange)",artist:"var(--purple)",invoice:"var(--green)"};
+
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:"13vh"}} onClick={onClose}>
+      <div style={{width:"min(620px,92vw)",background:"var(--modal-bg)",border:"1px solid var(--border2)",borderRadius:18,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,0,0.7)",animation:"scaleIn .15s cubic-bezier(.32,.72,0,1)"}} onClick={e=>e.stopPropagation()}>
+        {/* Search input */}
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 18px",borderBottom:"1px solid var(--border)"}}>
+          <span style={{fontSize:18,opacity:.4}}>🔍</span>
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={e=>setQ(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Search projects, crew, vendors, artists, invoices…"
+            style={{flex:1,background:"transparent",border:"none",outline:"none",color:"var(--text)",fontSize:15,fontFamily:"'Geist',sans-serif"}}
+          />
+          {q&&<button onClick={()=>setQ("")} style={{background:"var(--bg4)",border:"none",borderRadius:6,color:"var(--text3)",cursor:"pointer",fontSize:12,padding:"2px 7px",lineHeight:1.5}}>✕</button>}
+          <kbd style={{fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg4)",border:"1px solid var(--border2)",borderRadius:5,padding:"2px 7px"}}>ESC</kbd>
+        </div>
+        {/* Results */}
+        <div ref={listRef} style={{maxHeight:380,overflowY:"auto"}}>
+          {!q.trim()&&(
+            <div style={{padding:"20px 18px",display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{fontSize:11,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Quick navigate</div>
+              {[{icon:"🎬",label:"Projects",tab:"projects"},{icon:"₹",label:"Finance",tab:"finance"},{icon:"🏢",label:"Clients",tab:"clients"},{icon:"👥",label:"Crew",tab:"crew"},{icon:"🏭",label:"Vendors",tab:"vendors"},{icon:"🎤",label:"Artists",tab:"artists"}].map(n=>(
+                <div key={n.tab} onClick={()=>{onNavigate(n.tab);onClose();}} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 10px",borderRadius:10,cursor:"pointer",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--bg4)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <span style={{fontSize:16}}>{n.icon}</span>
+                  <span style={{fontSize:14,color:"var(--text2)"}}>{n.label}</span>
+                  <span style={{marginLeft:"auto",fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↵</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {q.trim()&&results.length===0&&(
+            <div style={{padding:"36px 18px",textAlign:"center"}}>
+              <div style={{fontSize:26,marginBottom:10}}>🔭</div>
+              <div style={{fontSize:14,color:"var(--text2)"}}>No results for "<b>{q}</b>"</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:6}}>Try a name, client, role, or tag</div>
+            </div>
+          )}
+          {q.trim()&&results.length>0&&(
+            <div style={{padding:"8px 8px"}}>
+              {/* Group by type */}
+              {["project","crew","vendor","artist","invoice"].map(type=>{
+                const group=results.filter(r=>r.type===type);
+                if(!group.length)return null;
+                const labels={project:"Projects",crew:"Crew",vendor:"Vendors",artist:"Artists",invoice:"Invoices"};
+                return(
+                  <div key={type}>
+                    <div style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",letterSpacing:"0.08em",textTransform:"uppercase",padding:"8px 10px 4px"}}>{labels[type]}</div>
+                    {group.map((item,gi)=>{
+                      const globalIdx=results.indexOf(item);
+                      const isActive=globalIdx===sel;
+                      return(
+                        <div key={item.id} onClick={()=>go(item)} onMouseEnter={()=>setSel(globalIdx)}
+                          style={{display:"flex",alignItems:"center",gap:12,padding:"9px 10px",borderRadius:10,cursor:"pointer",background:isActive?"var(--bg4)":"transparent",transition:"background .08s",marginBottom:2}}>
+                          <div style={{width:32,height:32,borderRadius:9,background:typeColors[type]+"22",border:`1px solid ${typeColors[type]}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{item.icon}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:13,fontWeight:500,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{highlight(item.label,q)}</div>
+                            <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.sub}</div>
+                          </div>
+                          <div style={{fontSize:11,color:typeColors[type],fontFamily:"'Geist Mono',monospace",background:typeColors[type]+"18",borderRadius:6,padding:"2px 7px",flexShrink:0,textTransform:"capitalize"}}>{type}</div>
+                          {isActive&&<span style={{fontSize:11,color:"var(--text3)"}}>↵</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* Footer */}
+        <div style={{padding:"10px 18px",borderTop:"1px solid var(--border)",display:"flex",gap:16,alignItems:"center"}}>
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↑↓ navigate</span>
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>↵ open tab</span>
+          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>ESC close</span>
+          {results.length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{results.length} result{results.length!==1?"s":""}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── ROOT APP ── */
 export default function App(){
   const[role,setRole]=useState(()=>sessionStorage.getItem("frameOS_role")||null);
@@ -2271,6 +2390,11 @@ export default function App(){
   const[showExpUrl,setShowExpUrl]=useState(false);
   const[allCrew,setAllCrew,loadingCrew]=useDB("crew",mpC);
   const[allVendors,setAllVendors]=useDB("vendors",mpV);
+  const[allProjects,,]=useDB("projects",mpP);
+  const[allArtistsSearch,,]=useDB("artists",mpArtist);
+  const[allInvoicesSearch,,]=useDB("invoices",r=>mpI(r,[]));
+  const[showSearch,setShowSearch]=useState(false);
+  useEffect(()=>{const h=e=>{if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();setShowSearch(s=>!s);}};document.addEventListener("keydown",h);return()=>document.removeEventListener("keydown",h);},[]);
   const isAdmin=role==="admin";const isViewer=role==="viewer";
   const NAV=isAdmin?NAV_A:NAV_V;
   const tryUnlock=pw=>{if(pw===password){sessionStorage.setItem("frameOS_role","admin");setRole("admin");return "admin";}if(pw===viewerPw){sessionStorage.setItem("frameOS_role","viewer");setRole("viewer");return "viewer";}return null;};
@@ -2295,6 +2419,11 @@ export default function App(){
             <span className="hmob" style={{fontSize:12,color:"var(--text3)",fontFamily:"'Geist Mono',monospace"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <button onClick={()=>setShowSearch(true)} title="Global search (⌘K)" style={{display:"flex",alignItems:"center",gap:7,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:13,color:"var(--text2)",padding:"0 12px",flexShrink:0}}>
+              <span style={{fontSize:14}}>🔍</span>
+              <span className="hmob" style={{fontSize:12,fontFamily:"'Geist Mono',monospace"}}>Search</span>
+              <kbd className="hmob" style={{fontSize:10,fontFamily:"'Geist Mono',monospace",color:"var(--text3)",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:4,padding:"1px 5px",marginLeft:2}}>⌘K</kbd>
+            </button>
             {isAdmin&&expUrl&&<a href={expUrl} target="_blank" rel="noreferrer" title="Open Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--amber-bg)",border:"1px solid rgba(255,214,10,.25)",borderRadius:9,cursor:"pointer",fontSize:17,textDecoration:"none",flexShrink:0}}>💲</a>}
             {isAdmin&&!expUrl&&<button onClick={()=>setShowExpUrl(true)} title="Link Expense Tracker" style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:17,flexShrink:0}}>💲</button>}
             <button onClick={toggleTheme} title={theme==="dark"?"Switch to light":"Switch to dark"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,background:"var(--bg4)",border:"1px solid var(--border)",borderRadius:9,cursor:"pointer",fontSize:15,flexShrink:0}}>{theme==="dark"?"☀️":"🌙"}</button>
@@ -2324,6 +2453,7 @@ export default function App(){
         </footer>
       </div>
     </div>
+    {showSearch&&<GlobalSearch projects={allProjects} crew={allCrew} vendors={allVendors} artists={allArtistsSearch} invoices={allInvoicesSearch} onNavigate={t=>{setTab(t);}} onClose={()=>setShowSearch(false)}/>}
     {showChgPw&&<ChangePassModal onClose={()=>setShowChgPw(false)} onSave={handleChgAdmin} viewerPassword={viewerPw} onSaveViewer={handleChgViewer}/>}
     {showExpUrl&&<Modal title="Link Expense Tracker" onClose={()=>setShowExpUrl(false)}>
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
